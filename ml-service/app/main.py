@@ -6,6 +6,7 @@ from telegram import Update
 from telegram.request import HTTPXRequest
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
+from datetime import datetime
 
 from app.services.ocr_services import ocr_image
 from app.services.ai_services import refine_receipt
@@ -51,12 +52,19 @@ async def handle_receipt_photo(update: Update, context: ContextTypes.DEFAULT_TYP
             total = item.get("total_price", 0)
             item_list += f"• {name} x{qty} @{price:,} - Rp {total:,}\n"
         
+        try:
+            clean_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d %b %Y")
+        except:
+            clean_date = date
+        
         caption = (
-               f"🏪 *Store:* {store_name}\n"
-               f"📅 *Date:* {date} {time}\n"
-               f"🛒 *Items:* \n{item_list}"
-               f"───────────────\n"
-               f"💰 *Total Amount:* Rp {total_amount:,}\n"
+                f"🏪 *STORE:* {store_name.upper()}\n"
+                f"📅 *DATE:* {clean_date} | {time}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"🛒 *PURCHASED ITEMS:*\n"
+                f"{item_list}"
+                f"───────────────\n"
+                f"💰 *TOTAL AMOUNT:* *Rp {total_amount:,}*\n"
             )
         
         await update.message.reply_text(caption, parse_mode='Markdown')
