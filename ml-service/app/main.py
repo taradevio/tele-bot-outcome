@@ -39,24 +39,27 @@ async def handle_receipt_photo(update: Update, context: ContextTypes.DEFAULT_TYP
             store_name = refined_data.get("merchant_name", "N/A")
             items = refined_data.get("items", [])
             date = refined_data.get("date", "N/A")
+            price = refined_data.get("price", 0)
             time = refined_data.get("time", "N/A")
             total_amount = refined_data.get("total_amount", 0)
 
-        caption = (
-               f"🏪 *Store:* {store_name}\n"
-               f"📅 *Date:* {date} {time}\n"
-               f"💰 *Total Amount:* Rp {total_amount:,}\n"
-               f"───────────────\n"
-               f"🛒 *Items:* \n"
-            )
-        
+        item_list = ""
         for item in items:
             name = item.get("name", "N/A")
             qty = item.get("qty", 0)
             price = item.get("price", 0)
             total = item.get("total_price", 0)
-            caption += f"• {name} x{qty} - Rp {total:,}\n"
-            await update.message.reply_text(caption, parse_mode='Markdown')
+            item_list += f"• {name} x{qty} @{price:,} - Rp {total:,}\n"
+        
+        caption = (
+               f"🏪 *Store:* {store_name}\n"
+               f"📅 *Date:* {date} {time}\n"
+               f"🛒 *Items:* \n{item_list}"
+               f"───────────────\n"
+               f"💰 *Total Amount:* Rp {total_amount:,}\n"
+            )
+        
+        await update.message.reply_text(caption, parse_mode='Markdown')
     
     if os.path.exists(file_path):
         os.remove(file_path)
