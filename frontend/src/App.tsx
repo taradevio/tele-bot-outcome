@@ -1,10 +1,11 @@
 import { Navbar } from "./components/Navbar";
 import { Chart } from "./components/Chart";
+import { Search } from "./components/Search";
 
 function App() {
   return (
     <div>
-      <h1>Hello</h1>
+      <Search />
       <Chart />
       <Navbar />
     </div>
