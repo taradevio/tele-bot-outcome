@@ -24,6 +24,9 @@ export const Chart = () => {
           Your spending is 12.5% higher than last month
         </p>
       </div>
+      <div>
+        
+      </div>
     </div>
   );
 };

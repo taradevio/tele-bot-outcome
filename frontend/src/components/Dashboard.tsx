@@ -28,13 +28,13 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ReferenceLine,
+  //   ReferenceLine,
   Line,
   ComposedChart,
 } from "recharts";
 
 // Weekly budget limit (monthly / 4)
-const weeklyBudgetLimit = 750;
+// const weeklyBudgetLimit = 750;
 
 const chartData = [
   { week: "Week 1", spending: 450, budget: 750, predicted: null },
