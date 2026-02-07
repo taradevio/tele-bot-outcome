@@ -264,7 +264,7 @@ export const Dashboard = () => {
                 {/* Chart */}
                 <div className="relative">
                   {/* Fixed Header Tooltip / Info Bar */}
-                  <div className="absolute top-[-30px] left-0 right-0 flex justify-center z-10 h-8">
+                  <div className="absolute top-7.5 left-0 right-0 flex justify-center z-10 h-8">
                     {focusedData ? (
                       <Badge
                         className={`text-xs px-3 py-1 rounded-full transition-colors duration-200 ${
