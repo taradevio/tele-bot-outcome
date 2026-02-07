@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { CustomTooltip } from "./CustomChartTooltip";
 import {
   Bell,
   Search,
@@ -36,10 +37,10 @@ import {
 const weeklyBudgetLimit = 750;
 
 const chartData = [
-  { week: "Week 1", spending: 450, predicted: null },
-  { week: "Week 2", spending: 520, predicted: null },
-  { week: "Week 3", spending: 680, predicted: 680 },
-  { week: "Week 4", spending: null, predicted: 800 },
+  { week: "Week 1", spending: 450, budget: 750, predicted: null },
+  { week: "Week 2", spending: 520, budget: 750, predicted: null },
+  { week: "Week 3", spending: 680, budget: 750, predicted: 680 },
+  { week: "Week 4", spending: null, budget: 750, predicted: 800 },
 ];
 
 const storeData = [
@@ -137,6 +138,12 @@ const categoryData = [
 export const Dashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [focusedData, setFocusedData] = useState<{
+    week: string;
+    spending: number | null;
+    budget: number;
+    predicted: number | null;
+  } | null>(null);
 
   // Simulate data loading
   useEffect(() => {
@@ -206,7 +213,7 @@ export const Dashboard = () => {
 
       {/* Stats Card */}
       <div className="px-4 pb-4">
-        <Card className="bg-[#1a2129] border-none rounded-2xl overflow-hidden">
+        <Card className="bg-[#1a2129] border-none rounded-2xl overflow-hidden text-white">
           <CardContent className="p-5">
             {isLoading ? (
               <div className="space-y-4">
@@ -256,12 +263,40 @@ export const Dashboard = () => {
 
                 {/* Chart */}
                 <div className="relative">
-                  <Badge className="absolute top-0 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full z-10">
-                    +12% vs Oct
-                  </Badge>
-                  <div className="h-36 mt-6">
+                  {/* Fixed Header Tooltip / Info Bar */}
+                  <div className="absolute top-[-30px] left-0 right-0 flex justify-center z-10 h-8">
+                    {focusedData ? (
+                      <Badge
+                        className={`text-xs px-3 py-1 rounded-full transition-colors duration-200 ${
+                          (focusedData.spending || 0) > focusedData.budget
+                            ? "bg-red-500/20 text-red-400 border border-red-500/50"
+                            : "bg-blue-500 text-white"
+                        }`}
+                      >
+                        <span className="font-semibold mr-1">
+                          {focusedData.week}
+                        </span>
+                        <span className="mx-1">
+                          Actual: ${focusedData.spending ?? "-"}
+                        </span>
+                        <span className="mx-1 opacity-70">
+                          / Budget: ${focusedData.budget}
+                        </span>
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+                        +12% vs Oct
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="h-44 mt-8">
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={chartData}>
+                      <ComposedChart
+                        data={chartData}
+                        margin={{ left: 10, right: 10 }}
+                        onMouseLeave={() => setFocusedData(null)}
+                      >
                         <defs>
                           <linearGradient
                             id="colorSpending"
@@ -281,43 +316,52 @@ export const Dashboard = () => {
                               stopOpacity={0}
                             />
                           </linearGradient>
+                          <linearGradient
+                            id="colorBudget"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#64748b"
+                              stopOpacity={0.2}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#64748b"
+                              stopOpacity={0.1}
+                            />
+                          </linearGradient>
                         </defs>
                         <XAxis
                           dataKey="week"
                           axisLine={false}
                           tickLine={false}
                           tick={{ fill: "#9ca3af", fontSize: 12 }}
+                          interval={0}
+                          padding={{ left: 20, right: 20 }}
                         />
                         <YAxis hide domain={[0, 900]} />
-                        {/* Budget limit reference line */}
-                        <ReferenceLine
-                          y={weeklyBudgetLimit}
-                          stroke="#f59e0b"
-                          strokeDasharray="5 5"
-                          strokeWidth={1.5}
-                          label={{
-                            value: "Budget",
-                            position: "right",
-                            fill: "#f59e0b",
-                            fontSize: 10,
-                          }}
-                        />
+
                         <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#1a2129",
-                            border: "1px solid #374151",
-                            borderRadius: "8px",
-                            color: "#fff",
-                            padding: "8px 12px",
-                          }}
-                          cursor={{ stroke: "#374151", strokeWidth: 1 }}
-                          trigger="click"
-                          formatter={(value: number, name: string) => [
-                            `$${value}`,
-                            name === "spending" ? "Actual" : "Predicted",
-                          ]}
+                          content={
+                            <CustomTooltip setFocusedData={setFocusedData} />
+                          }
+                          cursor={{ stroke: "#ffffff20", strokeWidth: 1 }}
                         />
-                        {/* Actual spending area */}
+
+                        {/* Budget Layer (Background) */}
+                        <Area
+                          type="monotone"
+                          dataKey="budget"
+                          stroke="none"
+                          fill="url(#colorBudget)"
+                          fillOpacity={1}
+                        />
+
+                        {/* Actual spending area (Foreground) */}
                         <Area
                           type="monotone"
                           dataKey="spending"
@@ -348,7 +392,7 @@ export const Dashboard = () => {
 
       {/* Budget Progress */}
       <div className="px-4 pb-4">
-        <Card className="bg-[#1a2129] border-none rounded-2xl">
+        <Card className="bg-[#1a2129] border-none rounded-2xl text-white">
           <CardContent className="p-5">
             {isLoading ? (
               <div className="space-y-3">
@@ -407,7 +451,7 @@ export const Dashboard = () => {
           </Button>
         </div>
 
-        <Card className="bg-[#1a2129] border-none rounded-2xl">
+        <Card className="bg-[#1a2129] border-none rounded-2xl text-white">
           <CardContent className="p-4 space-y-4">
             {isLoading
               ? Array(5)
@@ -484,7 +528,7 @@ export const Dashboard = () => {
             : storeData.map((store) => (
                 <Card
                   key={store.id}
-                  className="bg-[#1a2129] border-none rounded-xl"
+                  className="bg-[#1a2129] border-none rounded-xl text-white"
                 >
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
