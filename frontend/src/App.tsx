@@ -1,13 +1,15 @@
-import { Navbar } from "./components/Navbar";
-import { Chart } from "./components/Chart";
-import { Search } from "./components/Search";
+// import { Navbar } from "./components/Navbar";
+// import { Chart } from "./components/Chart";
+// import { Search } from "./components/Search";
+import { Dashboard } from "./components/Dashboard";
 
 function App() {
   return (
     <div>
-      <Search />
+      {/* <Search />
       <Chart />
-      <Navbar />
+      <Navbar /> */}
+      <Dashboard />
     </div>
   );
 }
