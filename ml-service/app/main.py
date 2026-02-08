@@ -1,12 +1,14 @@
 import os
 import logging
+import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from telegram import Update
 from telegram.request import HTTPXRequest
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
 from datetime import datetime
+from pydantic import BaseModel
 
 from app.services.ocr_services import ocr_image
 from app.services.ai_services import refine_receipt
@@ -15,6 +17,16 @@ load_dotenv()
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class ReceiptData(BaseModel):
+    merchant_name: str
+    items: list
+    date: str
+    price: float
+    time: str
+    total_amount: float
+    caregory: str
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -33,41 +45,53 @@ async def handle_receipt_photo(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text('Sorry, the OCR process failed. Please try again with a clearer image.')
     else:
         await update.message.reply_text("Refining extracted data...")
+        # asyncio.create_task(update.message.reply_text(f"OCR Result:\n{raw_text}"))
         
-        refined_data = await refine_receipt(raw_text)
+        asyncio.create_task(background_refine(update, raw_text, file_path))
+    
+async def background_refine(update, raw_text, file_path):
+    refined_data = await refine_receipt(raw_text)
 
-        if refined_data:
-            store_name = refined_data.get("merchant_name", "N/A")
-            items = refined_data.get("items", [])
-            date = refined_data.get("date", "N/A")
-            price = refined_data.get("price", 0)
-            time = refined_data.get("time", "N/A")
-            total_amount = refined_data.get("total_amount", 0)
+    if not refined_data:
+        await update.message.reply_text('Sorry, I could not refine the receipt data. Please try again.')
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        return
 
-        item_list = ""
-        for item in items:
-            name = item.get("name", "N/A")
-            qty = item.get("qty", 0)
-            price = item.get("price", 0)
-            total = item.get("total_price", 0)
-            item_list += f"• {name} x{qty} @{price:,} - Rp {total:,}\n"
+    if refined_data:
+        store_name = refined_data.get("merchant_name", "N/A")
+        items = refined_data.get("items", [])
+        date = refined_data.get("date", "N/A")
+        price = refined_data.get("price", 0)
+        time = refined_data.get("time", "N/A")
+        total_amount = refined_data.get("total_amount", 0)
+        category = refined_data.get("category", "N/A")
+
+    item_list = ""
+    for item in items:
+        name = item.get("name", "N/A")
+        qty = item.get("qty", 0)
+        price = item.get("price", 0)
+        total = item.get("total_price", 0)
+        category = item.get("category", "N/A")
+        item_list += f"• {name} x{qty} @{price:,} - Rp {total:,} ({category})\n"
         
-        try:
-            clean_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d %b %Y")
-        except:
-            clean_date = date
+    try:
+        clean_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d %b %Y")
+    except:
+        clean_date = date
         
-        caption = (
-                f"🏪 *STORE:* {store_name.upper()}\n"
-                f"📅 *DATE:* {clean_date} | {time}\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"🛒 *PURCHASED ITEMS:*\n"
-                f"{item_list}"
-                f"───────────────\n"
-                f"💰 *TOTAL AMOUNT:* *Rp {total_amount:,}*\n"
-            )
+    caption = (
+            f"🏪 *STORE:* {store_name.upper()}\n"
+            f"📅 *DATE:* {clean_date} | {time}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"🛒 *PURCHASED ITEMS:*\n"
+            f"{item_list}"
+            f"───────────────\n"
+            f"💰 *TOTAL AMOUNT:* *Rp {total_amount:,}*\n"
+        )
         
-        await update.message.reply_text(caption, parse_mode='Markdown')
+    await update.message.reply_text(caption, parse_mode='Markdown')
     
     if os.path.exists(file_path):
         os.remove(file_path)
@@ -102,3 +126,8 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/")
 async def root():
     return {"message": "OCR Telegram Bot is running."}
+
+
+# @app.post("/process-receipt")
+# async def process_receipt(payload: ReceiptData, background_tasks: BackgroundTasks):
+#     logger.info(f"")

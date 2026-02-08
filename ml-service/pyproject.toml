@@ -11,5 +11,6 @@ dependencies = [
     "pydantic-settings>=2.12.0",
     "pytesseract>=0.3.13",
     "python-telegram-bot>=22.6",
+    "supabase>=2.27.3",
     "uvicorn[standard]>=0.40.0",
 ]
