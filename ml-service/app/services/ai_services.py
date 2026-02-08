@@ -62,8 +62,6 @@ async def refine_receipt(raw_text: str):
 
     try:
         logger.info(f"Sending prompt to Ollama for LLM processing for receipt ID: {receipt_id}")
-        loop = asyncio.get_event_loop()
-
 
         response = await custom_client.generate(
                 model="gpt-oss:120b-cloud",
