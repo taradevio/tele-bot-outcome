@@ -221,7 +221,7 @@ export const Dashboard = () => {
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
-          <img src={userData?.photo_url || "/avatar.png"} alt="Avatar" className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover" />
+          <img src={userData?.photo_url || "/avatar.png"} alt="Avatar" className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover" referrerPolicy="no-referrer"/>
           {/* <Avatar className="h-12 w-12 border-2 border-gray-600">
             <AvatarImage src="/avatar.png" alt="Alex" />
             <AvatarFallback className="bg-gray-700 text-white">
