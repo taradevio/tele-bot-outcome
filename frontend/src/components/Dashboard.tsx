@@ -19,7 +19,7 @@ import {
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+// import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Skeleton } from "./ui/skeleton";
@@ -36,6 +36,12 @@ import {
 
 // Weekly budget limit (monthly / 4)
 // const weeklyBudgetLimit = 750;
+
+
+interface TelegramUser {
+  first_name: string;
+  photo_url?: string;
+}
 
 const chartData = [
   { week: "Week 1", spending: 450, budget: 750, predicted: null },
@@ -156,7 +162,7 @@ const categoryData = [
 
 export const Dashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
-  const [userData, setUserData] = useState(null);
+  const [userData, setUserData] = useState<TelegramUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [focusedData, setFocusedData] = useState<{
     week: string;
@@ -215,17 +221,18 @@ export const Dashboard = () => {
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12 border-2 border-gray-600">
+          <img src={userData?.photo_url || "/avatar.png"} alt="Avatar" className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover" />
+          {/* <Avatar className="h-12 w-12 border-2 border-gray-600">
             <AvatarImage src="/avatar.png" alt="Alex" />
             <AvatarFallback className="bg-gray-700 text-white">
               👨
             </AvatarFallback>
-          </Avatar>
+          </Avatar> */}
           <div>
             <p className="text-xs text-gray-300 uppercase tracking-wide">
               Welcome Back
             </p>
-            <h1 className="text-lg font-semibold">Hello, Alex 👋</h1>
+            <h1 className="text-lg font-semibold">Hello, {userData?.first_name || "User"} 👋</h1>
           </div>
         </div>
         <div className="flex items-center gap-1">
