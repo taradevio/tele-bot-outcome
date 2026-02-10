@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { jwt } from "hono/jwt";
 import supabaseClient from "./middleware/auth";
 
 type Env = {
@@ -7,6 +8,7 @@ type Env = {
     SUPABASE_URL: string;
     SUPABASE_KEY: string;
     ML_SERVICE: string;
+    JWT_SECRET: string;
   };
 };
 
@@ -27,33 +29,33 @@ app.post("/process-receipt", async (c) => {
   const payloadData = await c.req.json();
   const telegramUser = payloadData.user;
 
-
   console.log(
     `Received receipt data for receipt: ${payloadData.receipt.receipt_id}`,
   );
 
   try {
-
-    const {data: userData, error: userError} = await db
+    const { data: userData, error: userError } = await db
       .from("users")
-      .upsert({
-        telegram_id: telegramUser.telegram_id,
-        username: telegramUser.user_name,
-        first_name: telegramUser.first_name,
-      }, {
-        onConflict: "telegram_id",
-      })
+      .upsert(
+        {
+          telegram_id: telegramUser.telegram_id,
+          username: telegramUser.user_name,
+          first_name: telegramUser.first_name,
+        },
+        {
+          onConflict: "telegram_id",
+        },
+      )
       .select("id")
       .single();
 
-      if (userError) {
-        console.error("Error upserting user:", userError);
-        return c.json(
-          { status: "Error upserting user", error: userError.message },
-          500,
-        );
-      }
-
+    if (userError) {
+      console.error("Error upserting user:", userError);
+      return c.json(
+        { status: "Error upserting user", error: userError.message },
+        500,
+      );
+    }
 
     const { data: receiptData, error: receiptError } = await db
       .from("receipts")
@@ -79,7 +81,6 @@ app.post("/process-receipt", async (c) => {
         500,
       );
     }
-
 
     // use below when ML service needs to be called from backend
     // if (data) {
@@ -114,6 +115,34 @@ app.post("/process-receipt", async (c) => {
     );
   }
 });
+
+app.get(
+  "/api/user-data",
+  async (c, next) => {
+    const jwtMiddleware = jwt({
+      secret: c.env.JWT_SECRET,
+      alg: "HS256",
+    });
+
+    return jwtMiddleware(c, next);
+  },
+  async (c) => {
+    const db = supabaseClient(c.env);
+    const payload = c.get("jwtPayload");
+
+    const telegram_id = payload.telegram_id;
+
+    const { data, error } = await db
+      .from("users")
+      .select("id, first_name")
+      .eq("telegram_id", telegram_id)
+      .single();
+
+    if (error) return c.json({ error: error.message }, 500);
+
+    return c.json(data);
+  },
+);
 
 app.get("/charts", (c) => {
   return c.json({ message: "Charts endpoint" });

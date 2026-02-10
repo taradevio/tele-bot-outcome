@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { CustomTooltip } from "./CustomChartTooltip";
+// import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
   Search,
@@ -135,8 +136,27 @@ const categoryData = [
   },
 ];
 
+// const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
+// const fetchUserData = async () => {
+//   const response = await fetch(`${BACKEND_URL}/api/user-data`, {
+//     method: "GET",
+//     headers: {
+//       "Content-Type": "application/json",
+//       credentials: "include",
+//     },
+//   });
+
+//   if (!response.ok) {
+//     throw new Error("Failed to fetch user data");
+//   }
+
+//   return response.json();
+// };
+
 export const Dashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [focusedData, setFocusedData] = useState<{
     week: string;
@@ -149,6 +169,44 @@ export const Dashboard = () => {
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1500);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const telegram = (window as any).Telegram.WebApp;
+
+        if (!telegram) {
+          console.error("Telegram WebApp not found");
+          return;
+        }
+
+        const initData = telegram.initData;
+        if (!initData) {
+          console.error("bukan telegram");
+          return;
+        }
+        console.log("init data", initData);
+
+        telegram.ready();
+        const params = new URLSearchParams(initData);
+        const userId = params.get("user");
+
+        if (userId) {
+          try {
+            const decodeUser = JSON.parse(decodeURIComponent(userId));
+            setUserData(decodeUser);
+            console.log("decoded user", decodeUser);
+          } catch (error) {
+            console.error("error decoding user data", error);
+          }
+        }
+      } catch (error) {
+        console.log("error getting telegram data", error);
+      }
+    };
+
+    fetchData();
   }, []);
 
   return (
