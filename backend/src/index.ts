@@ -144,6 +144,11 @@ app.get(
   },
 );
 
+
+app.post("/login", async (c) => {
+
+})
+
 app.get("/charts", (c) => {
   return c.json({ message: "Charts endpoint" });
 });
