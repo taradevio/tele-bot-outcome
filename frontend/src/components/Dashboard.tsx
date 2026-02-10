@@ -197,6 +197,7 @@ export const Dashboard = () => {
             const decodeUser = JSON.parse(decodeURIComponent(userId));
             setUserData(decodeUser);
             console.log("decoded user", decodeUser);
+            console.log("user data", userData);
           } catch (error) {
             console.error("error decoding user data", error);
           }
