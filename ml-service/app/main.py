@@ -95,7 +95,7 @@ async def background_refine(update, raw_text, file_path):
             response = await client.post(
                 f"{BACKEND_URL}/process-receipt",
                 json=payload,
-                timeout=20.0
+                timeout=50.0
             )
 
             if response.status_code == 200:

@@ -44,6 +44,15 @@ async def refine_receipt(raw_text: str):
     DATA OCR:
     {raw_text}
 
+    INSTRUKSI KHUSUS:
+    1. MERCHANT_NAME: Ambil dari baris paling atas atau nama PT yang tertera.
+    2. CURRENCY: Hapus semua titik/koma pemisah ribuan. Pastikan total_amount adalah INTEGER.
+    3. TOTAL_AMOUNT: Harus sesuai dengan jumlah total dari semua item, bisa tertulis subtotal, total, atau jumlah Jika tidak sesuai, kembalikan error.
+    3. ITEMS: Jika qty tidak tertulis, asumsikan 1. Pastikan total_price tiap item konsisten (qty * price).
+    4. DATE & TIME: Jika tidak ditemukan, gunakan null. Format date wajib YYYY-MM-DD.
+    5. KATEGORI: Pilih satu yang paling relevan: [Food & Beverage, Shopping, Transport, Bills, Health, Entertainment, Others].
+    Think step by step and make sure the total_amount matches the sum of item total_prices.
+
     FORMAT JSON YANG DIMINTA:
     {{
       "receipt_id": "{receipt_id}",
@@ -71,7 +80,7 @@ async def refine_receipt(raw_text: str):
                     "temperature": 0.1,
                     "num_predict": 1024,
                     "top_k": 20,
-                    "top_p": 0.2
+                    "top_p": 0.7
                 }
 
             )
@@ -79,6 +88,11 @@ async def refine_receipt(raw_text: str):
         try:
             response_data = json.loads(response['response'])
             response_data['receipt_id'] = receipt_id
+
+            # print("--- REFINED RECEIPT START ---")
+            # print(response_data)
+            # print("--- REFINED RECEIPT END ---")
+
             return response_data
 
         except:
