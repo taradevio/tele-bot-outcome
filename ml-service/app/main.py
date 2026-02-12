@@ -53,16 +53,22 @@ async def handle_receipt_photo(update: Update, context: ContextTypes.DEFAULT_TYP
     file_path = f"temp_receipt_{photo_file.file_id}.jpg"
     await photo_file.download_to_drive(file_path)
 
-    await update.message.reply_text('Performing OCR on the image...')
-    raw_text = await ocr_image(file_path)
+    try:
+        await update.message.reply_text('Performing OCR on the image...')
+        raw_text = await ocr_image(file_path)
 
-    if not raw_text:
-        await update.message.reply_text('Sorry, the OCR process failed. Please try again with a clearer image.')
-    else:
-        await update.message.reply_text("Refining extracted data...")
-        # asyncio.create_task(update.message.reply_text(f"OCR Result:\n{raw_text}"))
-        
-        asyncio.create_task(background_refine(update, raw_text, file_path))
+        if not raw_text:
+            await update.message.reply_text('Sorry, the OCR process failed. Please try again with a clearer image.')
+        else:
+            await update.message.reply_text("Refining extracted data...")
+            # asyncio.create_task(update.message.reply_text(f"OCR Result:\n{raw_text}"))
+            
+            await background_refine(update, raw_text, file_path)
+    
+    except Exception as e:
+        logger.error(f"Error processing receipt image: {e}")
+        await update.message.reply_text('Sorry, an error occurred while processing your receipt image.')
+
     
 async def background_refine(update, raw_text, file_path):
     refined_data = await refine_receipt(raw_text)
@@ -151,7 +157,7 @@ async def background_refine(update, raw_text, file_path):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     request_config = HTTPXRequest(
-        connect_timeout=20.0,
+        connect_timeout=60.0,
         read_timeout=60.0
     )
     ocr_app = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).request(request_config).build()
