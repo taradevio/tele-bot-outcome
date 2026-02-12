@@ -1,0 +1,27 @@
+# Python junk
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environment & Secrets (PENTING!)
+.env
+.python-version
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+dockerfile
+.dockerignore
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Project specific
+temp_receipt_*.jpg
