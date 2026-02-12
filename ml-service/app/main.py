@@ -18,7 +18,7 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8787")
+BACKEND_URL = os.getenv("BACKEND_URL")
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
