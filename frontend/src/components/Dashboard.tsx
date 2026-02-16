@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { CustomTooltip } from "./CustomChartTooltip";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+
 // import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
@@ -42,6 +44,8 @@ interface TelegramUser {
   first_name: string;
   photo_url?: string;
 }
+
+const queryClient = new QueryClient()
 
 const chartData = [
   { week: "Week 1", spending: 450, budget: 750, predicted: null },
@@ -160,7 +164,17 @@ const categoryData = [
 //   return response.json();
 // };
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 export const Dashboard = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <UserDashboard />
+    </QueryClientProvider>
+  )
+}
+
+const UserDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [userData, setUserData] = useState<TelegramUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -170,6 +184,20 @@ export const Dashboard = () => {
     budget: number;
     predicted: number | null;
   } | null>(null);
+
+
+    const { data, error } = useQuery({
+      queryKey: ['userReceipts'],
+      queryFn: () =>
+        fetch(`${BACKEND_URL}/api/user-data`).then ((res) => res.json()),
+    })
+  
+    if(error) return "Data dari db kagak keangkut coy..."
+  
+    if(data) {
+      console.log(data)
+    }
+
 
   // Simulate data loading
   useEffect(() => {

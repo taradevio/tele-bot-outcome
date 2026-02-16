@@ -118,29 +118,39 @@ app.post("/process-receipt", async (c) => {
 
 app.get(
   "/api/user-data",
-  async (c, next) => {
-    const jwtMiddleware = jwt({
-      secret: c.env.JWT_SECRET,
-      alg: "HS256",
-    });
+  // async (c, next) => {
+  //   const jwtMiddleware = jwt({
+  //     secret: c.env.JWT_SECRET,
+  //     alg: "HS256",
+  //   });
 
-    return jwtMiddleware(c, next);
-  },
+  //   return jwtMiddleware(c, next);
+  // },
   async (c) => {
     const db = supabaseClient(c.env);
-    const payload = c.get("jwtPayload");
+    // const payload = c.get("jwtPayload");
 
-    const telegram_id = payload.telegram_id;
+    const telegram_id = c.req.query("telegram_id");
 
-    const { data, error } = await db
+    const { data: userData, error: userError } = await db
       .from("users")
       .select("id, first_name")
       .eq("telegram_id", telegram_id)
       .single();
 
-    if (error) return c.json({ error: error.message }, 500);
+    if (userError) return c.json({ error: userError.message }, 500);
 
-    return c.json(data);
+    const userId = c.req.query("user_id")
+
+    const {data: userReceipts, error: errorReceipts} = await db
+      .from("receipts")
+      .select("store_name, total_amount")
+      .eq("user_id", userId)
+      .single()
+
+    if(errorReceipts) return c.json({error: errorReceipts.message}, 500)
+
+    return c.json({userData, userReceipts});
   },
 );
 
