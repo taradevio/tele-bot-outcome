@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { CustomTooltip } from "./CustomChartTooltip";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
 
 // import { useQuery } from "@tanstack/react-query";
 import {
@@ -39,13 +43,13 @@ import {
 // Weekly budget limit (monthly / 4)
 // const weeklyBudgetLimit = 750;
 
-
 interface TelegramUser {
   first_name: string;
   photo_url?: string;
+  id?: string;
 }
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient();
 
 const chartData = [
   { week: "Week 1", spending: 450, budget: 750, predicted: null },
@@ -171,8 +175,8 @@ export const Dashboard = () => {
     <QueryClientProvider client={queryClient}>
       <UserDashboard />
     </QueryClientProvider>
-  )
-}
+  );
+};
 
 const UserDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -184,20 +188,6 @@ const UserDashboard = () => {
     budget: number;
     predicted: number | null;
   } | null>(null);
-
-
-    const { data, error } = useQuery({
-      queryKey: ['userReceipts'],
-      queryFn: () =>
-        fetch(`${BACKEND_URL}/api/user-data`).then ((res) => res.json()),
-    })
-  
-    if(error) return "Data dari db kagak keangkut coy..."
-  
-    if(data) {
-      console.log(data)
-    }
-
 
   // Simulate data loading
   useEffect(() => {
@@ -220,7 +210,7 @@ const UserDashboard = () => {
           console.error("bukan telegram");
           return;
         }
-        console.log("init data", initData);
+        // console.log("init data", initData);
 
         telegram.ready();
         const params = new URLSearchParams(initData);
@@ -230,8 +220,8 @@ const UserDashboard = () => {
           try {
             const decodeUser = JSON.parse(decodeURIComponent(userId));
             setUserData(decodeUser);
-            console.log("decoded user", decodeUser);
-            console.log("user data", userData);
+            // console.log("decoded user", decodeUser);
+            // console.log("user data", userData);
           } catch (error) {
             console.error("error decoding user data", error);
           }
@@ -244,12 +234,38 @@ const UserDashboard = () => {
     fetchData();
   }, []);
 
+  const { data, error } = useQuery({
+    queryKey: ["userReceipts", userData],
+    queryFn: async () => {
+      const res = await fetch(`${BACKEND_URL}/api/user-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userData }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    enabled: !!userData,
+  });
+
+  if (error) return "Data dari db kagak keangkut coy...";
+
+  if (data) {
+    console.log(data);
+  }
+
   return (
     <div className="min-h-screen bg-[#0f1419] text-white pb-24">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
-          <img src={userData?.photo_url || "/avatar.png"} alt="Avatar" className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover" referrerPolicy="no-referrer"/>
+          <img
+            src={userData?.photo_url || "/avatar.png"}
+            alt="Avatar"
+            className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover"
+            referrerPolicy="no-referrer"
+          />
           {/* <Avatar className="h-12 w-12 border-2 border-gray-600">
             <AvatarImage src="/avatar.png" alt="Alex" />
             <AvatarFallback className="bg-gray-700 text-white">
@@ -260,7 +276,9 @@ const UserDashboard = () => {
             <p className="text-xs text-gray-300 uppercase tracking-wide">
               Welcome Back
             </p>
-            <h1 className="text-lg font-semibold">Hello, {userData?.first_name || "User"} 👋</h1>
+            <h1 className="text-lg font-semibold">
+              Hello, {userData?.first_name || "User"} 👋
+            </h1>
           </div>
         </div>
         <div className="flex items-center gap-1">

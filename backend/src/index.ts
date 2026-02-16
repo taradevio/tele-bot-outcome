@@ -2,13 +2,14 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { jwt } from "hono/jwt";
 import supabaseClient from "./middleware/auth";
-
+import { verifyTelegramHash } from "./utils/verifyTelegram";
 type Env = {
   Bindings: {
     SUPABASE_URL: string;
     SUPABASE_KEY: string;
     ML_SERVICE: string;
     JWT_SECRET: string;
+    BOT_TOKEN: string;
   };
 };
 
@@ -130,9 +131,17 @@ app.get(
     const db = supabaseClient(c.env);
     // const payload = c.get("jwtPayload");
 
-    const telegram_id = c.req.query("telegram_id");
+    const { userData } = await c.req.json()
 
-    const { data: userData, error: userError } = await db
+    const isValid = verifyTelegramHash(userData, c.env.BOT_TOKEN)
+    if(!isValid) return c.json({error: "Invalid telegram hash"}, 403)
+
+    const params = new URLSearchParams(userData)
+    const userJson = params.get("user")
+    const telegramUser = JSON.parse(userJson || "{}")
+    const telegram_id = telegramUser.telegram_id
+
+    const { data: userProfile, error: userError } = await db
       .from("users")
       .select("id, first_name")
       .eq("telegram_id", telegram_id)
@@ -140,17 +149,20 @@ app.get(
 
     if (userError) return c.json({ error: userError.message }, 500);
 
-    const userId = c.req.query("user_id")
+    // const userId = c.req.query("user_id")
+    const userId = telegramUser.user_id
 
     const {data: userReceipts, error: errorReceipts} = await db
       .from("receipts")
       .select("store_name, total_amount")
-      .eq("user_id", userId)
+      .eq("user_id", userData.id)
       .single()
 
     if(errorReceipts) return c.json({error: errorReceipts.message}, 500)
 
-    return c.json({userData, userReceipts});
+    console.log(userProfile, userReceipts)
+
+    return c.json({userProfile, userReceipts});
   },
 );
 
