@@ -181,7 +181,7 @@ export const Dashboard = () => {
 const UserDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [userData, setUserData] = useState<string | null>(null);
-  const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null)
+  const [telegramUserProfile, setTelegramUserProfile] = useState<TelegramUser | null>(null)
   const [isLoading, setIsLoading] = useState(true);
   const [focusedData, setFocusedData] = useState<{
     week: string;
@@ -253,15 +253,16 @@ const UserDashboard = () => {
     enabled: !!userData,
   });
 
-  if (error) return "Data dari db kagak keangkut coy...";
-
+  
   useEffect(() => {
     if (data) {
-      setTelegramUser(data);
-      console.log(`telegramUser: ${telegramUser}`);
+      setTelegramUserProfile(data.userProfile);
+      // setTelegramUser(data.userReceipts);
+      console.log(`telegramUser: ${telegramUserProfile}`);
     }
   }, [data])
 
+  if (error) return "Data dari db kagak keangkut coy...";
 
   return (
     <div className="min-h-screen bg-[#0f1419] text-white pb-24">
@@ -269,7 +270,7 @@ const UserDashboard = () => {
       <div className="flex items-center justify-between px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
           <img
-            src={telegramUser?.photo_url || "/avatar.png"}
+            src={telegramUserProfile?.photo_url || "/avatar.png"}
             alt="Avatar"
             className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover"
             referrerPolicy="no-referrer"
@@ -285,7 +286,7 @@ const UserDashboard = () => {
               Welcome Back
             </p>
             <h1 className="text-lg font-semibold">
-              Hello, {telegramUser?.first_name || "User"} 👋
+              Hello, {telegramUserProfile?.first_name || "User"} 👋
             </h1>
           </div>
         </div>
