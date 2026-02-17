@@ -79,14 +79,19 @@ app.post("/process-receipt", async (c) => {
         `Inserted receipt with ID: ${receiptData.id} for user ID: ${userData?.id}`,
       );
 
+      // const parseReceiptItems = JSON.parse(payloadData.receipt)
+
       const receiptItems = payloadData.receipt.items.map((item: any) => ({
         receipt_id: receiptData.id,
         name: item.name,
         qty: item.qty,
         price: item.price,
-        total_price: item.price * item.qty,
+        total_price: item.total_price,
         category: item.category,
       }));
+
+      // const receipt_items = payloadData.receipt;
+      console.log("ReceiptItems:", receiptItems)
 
       const { error: itemsError } = await db
         .from("receipt_items")
