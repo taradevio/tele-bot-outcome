@@ -17,7 +17,12 @@ const app = new Hono<Env>();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173", "http://127.0.0.1:8000", "https://struktly.pages.dev"],
+    origin: [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:8000",
+      "https://struktly.pages.dev",
+    ],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -73,6 +78,31 @@ app.post("/process-receipt", async (c) => {
       console.log(
         `Inserted receipt with ID: ${receiptData.id} for user ID: ${userData?.id}`,
       );
+
+      const receiptItems = payloadData.receipt.items.map((item: any) => ({
+        receipt_id: receiptData.id,
+        name: item.name,
+        qty: item.qty,
+        price: item.price,
+        total_price: item.price * item.qty,
+        category: item.category,
+      }));
+
+      const { error: itemsError } = await db
+        .from("receipt_items")
+        .insert(receiptItems);
+
+      if (itemsError) {
+        console.error("Error inserting receipt items:", itemsError);
+        return c.json(
+          {
+            status: "Error inserting receipt items",
+            error: itemsError.message,
+          },
+          500,
+        );
+      }
+       console.log(`Inserted ${receiptItems.length} items for receipt ID: ${receiptData.id}`);
     }
 
     if (receiptError) {
@@ -131,15 +161,15 @@ app.post(
     const db = supabaseClient(c.env);
     // const payload = c.get("jwtPayload");
 
-    const { userData } = await c.req.json()
+    const { userData } = await c.req.json();
 
-    const isValid = verifyTelegramHash(userData, c.env.BOT_TOKEN)
-    if(!isValid) return c.json({error: "Invalid telegram hash"}, 403)
+    const isValid = verifyTelegramHash(userData, c.env.BOT_TOKEN);
+    if (!isValid) return c.json({ error: "Invalid telegram hash" }, 403);
 
-    const params = new URLSearchParams(userData)
-    const userJson = params.get("user")
-    const telegramUser = JSON.parse(userJson || "{}")
-    const telegram_id = telegramUser.id
+    const params = new URLSearchParams(userData);
+    const userJson = params.get("user");
+    const telegramUser = JSON.parse(userJson || "{}");
+    const telegram_id = telegramUser.id;
 
     const { data: userProfile, error: userError } = await db
       .from("users")
@@ -150,25 +180,24 @@ app.post(
     if (userError) return c.json({ error: userError.message }, 500);
 
     // const userId = c.req.query("user_id")
-    const userId = telegramUser.user_id
+    const userId = telegramUser.user_id;
 
-    const {data: userReceipts, error: errorReceipts} = await db
+    const { data: userReceipts, error: errorReceipts } = await db
       .from("receipts")
-      .select("store_name, total_amount")
-      .eq("user_id", userProfile.id)
+      .select(
+        "id, store_name, total_amount, created_at, receipt_items: {id, name, qty, price, total_price, category, created_at}",
+      )
+      .eq("user_id", userProfile.id);
 
-    if(errorReceipts) return c.json({error: errorReceipts.message}, 500)
+    if (errorReceipts) return c.json({ error: errorReceipts.message }, 500);
 
-    console.log(userProfile, userReceipts)
+    console.log(userProfile, userReceipts);
 
-    return c.json({userProfile, userReceipts});
+    return c.json({ userProfile, userReceipts });
   },
 );
 
-
-app.post("/login", async (c) => {
-
-})
+app.post("/login", async (c) => {});
 
 app.get("/charts", (c) => {
   return c.json({ message: "Charts endpoint" });
