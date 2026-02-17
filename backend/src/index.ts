@@ -117,7 +117,7 @@ app.post("/process-receipt", async (c) => {
   }
 });
 
-app.get(
+app.post(
   "/api/user-data",
   // async (c, next) => {
   //   const jwtMiddleware = jwt({
