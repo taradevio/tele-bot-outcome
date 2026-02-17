@@ -180,7 +180,8 @@ export const Dashboard = () => {
 
 const UserDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
-  const [userData, setUserData] = useState<TelegramUser | null>(null);
+  const [userData, setUserData] = useState<string | null>(null);
+  const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null)
   const [isLoading, setIsLoading] = useState(true);
   const [focusedData, setFocusedData] = useState<{
     week: string;
@@ -210,7 +211,7 @@ const UserDashboard = () => {
           console.error("bukan telegram");
           return;
         }
-        // console.log("init data", initData);
+        console.log("init data", initData);
         setUserData(initData);
 
         telegram.ready();
@@ -239,7 +240,10 @@ const UserDashboard = () => {
     queryFn: async () => {
       const res = await fetch(`${BACKEND_URL}/api/user-data`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+           "X-Telegram-Init-Data": userData ?? "",
+          },
         body: JSON.stringify({ userData }),
       });
 
@@ -252,6 +256,7 @@ const UserDashboard = () => {
   if (error) return "Data dari db kagak keangkut coy...";
 
   if (data) {
+    setTelegramUser(data);
     console.log(data);
   }
 
@@ -261,7 +266,7 @@ const UserDashboard = () => {
       <div className="flex items-center justify-between px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
           <img
-            src={userData?.photo_url || "/avatar.png"}
+            src={telegramUser?.photo_url || "/avatar.png"}
             alt="Avatar"
             className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover"
             referrerPolicy="no-referrer"
@@ -277,7 +282,7 @@ const UserDashboard = () => {
               Welcome Back
             </p>
             <h1 className="text-lg font-semibold">
-              Hello, {userData?.first_name || "User"} 👋
+              Hello, {telegramUser?.first_name || "User"} 👋
             </h1>
           </div>
         </div>

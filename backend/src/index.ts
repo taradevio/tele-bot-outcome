@@ -139,7 +139,7 @@ app.get(
     const params = new URLSearchParams(userData)
     const userJson = params.get("user")
     const telegramUser = JSON.parse(userJson || "{}")
-    const telegram_id = telegramUser.telegram_id
+    const telegram_id = telegramUser.id
 
     const { data: userProfile, error: userError } = await db
       .from("users")
