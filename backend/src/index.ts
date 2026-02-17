@@ -155,8 +155,7 @@ app.get(
     const {data: userReceipts, error: errorReceipts} = await db
       .from("receipts")
       .select("store_name, total_amount")
-      .eq("user_id", userData.id)
-      .single()
+      .eq("user_id", userProfile.id)
 
     if(errorReceipts) return c.json({error: errorReceipts.message}, 500)
 
