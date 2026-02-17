@@ -181,8 +181,9 @@ export const Dashboard = () => {
 const UserDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [userData, setUserData] = useState<string | null>(null);
-  const [telegramUserProfile, setTelegramUserProfile] = useState<TelegramUser | null>(null)
-  const [photoUrl, SetPhotoUrl] = useState<string | null>(null)
+  const [telegramUserProfile, setTelegramUserProfile] =
+    useState<TelegramUser | null>(null);
+  const [photoUrl, SetPhotoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [focusedData, setFocusedData] = useState<{
     week: string;
@@ -222,7 +223,7 @@ const UserDashboard = () => {
         if (userId) {
           try {
             const decodeUser = JSON.parse(decodeURIComponent(userId));
-            SetPhotoUrl(decodeUser.photo_url)
+            SetPhotoUrl(decodeUser.photo_url);
             console.log("decoded user", decodeUser);
             // console.log("user data", userData);
           } catch (error) {
@@ -242,10 +243,10 @@ const UserDashboard = () => {
     queryFn: async () => {
       const res = await fetch(`${BACKEND_URL}/api/user-data`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           //  "X-Telegram-Init-Data": userData ?? "",
-          },
+        },
         body: JSON.stringify({ userData }),
       });
 
@@ -255,14 +256,13 @@ const UserDashboard = () => {
     enabled: !!userData,
   });
 
-  
   useEffect(() => {
     if (data) {
       setTelegramUserProfile(data.userProfile);
       // setTelegramUser(data.userReceipts);
       console.log(`telegramUser: ${telegramUserProfile}`);
     }
-  }, [data])
+  }, [data]);
 
   if (error) return "Data dari db kagak keangkut coy...";
 
@@ -271,12 +271,16 @@ const UserDashboard = () => {
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
-          <img
-            src={photoUrl || "/avatar.png"}
-            alt="Avatar"
-            className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover"
-            referrerPolicy="no-referrer"
-          />
+          {isLoading ? (
+            <Skeleton className="h-10 w-32 bg-gray-700" />
+          ) : (
+            <img
+              src={photoUrl || "/avatar.png"}
+              alt="Avatar"
+              className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover"
+              referrerPolicy="no-referrer"
+            />
+          )}
           {/* <Avatar className="h-12 w-12 border-2 border-gray-600">
             <AvatarImage src="/avatar.png" alt="Alex" />
             <AvatarFallback className="bg-gray-700 text-white">
@@ -288,7 +292,11 @@ const UserDashboard = () => {
               Welcome Back
             </p>
             <h1 className="text-lg font-semibold">
-              Hello, {telegramUserProfile?.first_name || "User"} 👋
+              {isLoading ? (
+                <Skeleton className="h-10 w-32 bg-gray-700" />
+              ) : (
+                `Hello ${telegramUserProfile}`
+              )}
             </h1>
           </div>
         </div>
