@@ -258,7 +258,7 @@ const UserDashboard = () => {
   useEffect(() => {
     if (data) {
       setTelegramUser(data);
-      console.log(data);
+      console.log(`telegramUser: ${telegramUser}`);
     }
   }, [data])
 
