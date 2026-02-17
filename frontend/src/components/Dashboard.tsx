@@ -182,6 +182,7 @@ const UserDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [userData, setUserData] = useState<string | null>(null);
   const [telegramUserProfile, setTelegramUserProfile] = useState<TelegramUser | null>(null)
+  const [photoUrl, SetPhotoUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true);
   const [focusedData, setFocusedData] = useState<{
     week: string;
@@ -215,18 +216,19 @@ const UserDashboard = () => {
         setUserData(initData);
 
         telegram.ready();
-        // const params = new URLSearchParams(initData);
-        // const userId = params.get("user");
+        const params = new URLSearchParams(initData);
+        const userId = params.get("user");
 
-        // if (userId) {
-        //   try {
-        //     const decodeUser = JSON.parse(decodeURIComponent(userId));
-        //     // console.log("decoded user", decodeUser);
-        //     // console.log("user data", userData);
-        //   } catch (error) {
-        //     console.error("error decoding user data", error);
-        //   }
-        // }
+        if (userId) {
+          try {
+            const decodeUser = JSON.parse(decodeURIComponent(userId));
+            SetPhotoUrl(decodeUser.photo_url)
+            console.log("decoded user", decodeUser);
+            // console.log("user data", userData);
+          } catch (error) {
+            console.error("error decoding user data", error);
+          }
+        }
       } catch (error) {
         console.log("error getting telegram data", error);
       }
@@ -270,7 +272,7 @@ const UserDashboard = () => {
       <div className="flex items-center justify-between px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
           <img
-            src={telegramUserProfile?.photo_url || "/avatar.png"}
+            src={photoUrl || "/avatar.png"}
             alt="Avatar"
             className="h-12 w-12 rounded-full border-2 border-gray-600 object-cover"
             referrerPolicy="no-referrer"
