@@ -238,7 +238,7 @@ const UserDashboard = () => {
     queryKey: ["userReceipts", userData],
     queryFn: async () => {
       const res = await fetch(`${BACKEND_URL}/api/user-data`, {
-        method: "POST",
+        method: "GET",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userData }),
       });
