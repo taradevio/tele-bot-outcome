@@ -295,7 +295,7 @@ const UserDashboard = () => {
               {isLoading ? (
                 <Skeleton className="h-10 w-32 bg-gray-700" />
               ) : (
-                `Hello ${telegramUserProfile}`
+                `Hello ${telegramUserProfile?.first_name}`
               )}
             </h1>
           </div>
