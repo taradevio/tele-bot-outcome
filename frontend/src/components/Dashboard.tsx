@@ -242,7 +242,7 @@ const UserDashboard = () => {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-           "X-Telegram-Init-Data": userData ?? "",
+          //  "X-Telegram-Init-Data": userData ?? "",
           },
         body: JSON.stringify({ userData }),
       });
@@ -255,10 +255,13 @@ const UserDashboard = () => {
 
   if (error) return "Data dari db kagak keangkut coy...";
 
-  if (data) {
-    setTelegramUser(data);
-    console.log(data);
-  }
+  useEffect(() => {
+    if (data) {
+      setTelegramUser(data);
+      console.log(data);
+    }
+  }, [data])
+
 
   return (
     <div className="min-h-screen bg-[#0f1419] text-white pb-24">
