@@ -194,7 +194,7 @@ const UserDashboard = () => {
 
   // Simulate data loading
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1500);
+    const timer = setTimeout(() => setIsLoading(false), 2000);
     return () => clearTimeout(timer);
   }, []);
 
