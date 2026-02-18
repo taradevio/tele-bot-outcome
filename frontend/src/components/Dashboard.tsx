@@ -288,9 +288,14 @@ const UserDashboard = () => {
   
   const flatItems = userReceipts?.flatMap(receipt => receipt.receipt_items)
 
-  const mapItems = flatItems.map((item) => item.category)
+  // const mapItems = flatItems.map((item) => item.category)
 
-  console.log("category", mapItems)
+  const categoryTotals = flatItems.reduce((acc, item) => {
+  acc[item.category] = (acc[item.category] || 0) + item.total_price;
+  return acc;
+}, {} as Record<string, number>);
+
+  console.log("category", categoryTotals)
   
   if (error) return "Data dari db kagak keangkut coy...";
 
@@ -624,32 +629,32 @@ const UserDashboard = () => {
                       <Skeleton className="h-2 w-full bg-gray-700" />
                     </div>
                   ))
-              : categoryData.map((category) => (
-                  <div key={category.id}>
+              : Object.entries(categoryTotals).map(([category, total]) => (
+                <div key={category}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{category.icon}</span>
+                        {/* <span className="text-lg">{category.icon}</span> */}
                         <span className="text-sm font-medium">
-                          {category.name}
+                          {category}
                         </span>
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-semibold">
-                          ${category.amount.toFixed(2)}
+                          Rp{total.toFixed(2)}
                         </span>
-                        <span className="text-xs text-gray-300 ml-2">
+                        {/* <span className="text-xs text-gray-300 ml-2">
                           {category.percentage}%
-                        </span>
+                        </span> */}
                       </div>
                     </div>
-                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    {/* <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${category.color} rounded-full transition-all`}
                         style={{ width: `${category.percentage}%` }}
                       />
-                    </div>
+                    </div> */}
                   </div>
-                ))}
+              ))}
           </CardContent>
         </Card>
       </div>
