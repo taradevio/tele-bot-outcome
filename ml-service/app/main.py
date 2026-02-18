@@ -112,6 +112,7 @@ async def background_refine(update, raw_text, file_path):
                 logger.info(f"Successfully stored receipt data in backend with ID: {db_id}")
             else:
                 logger.error(f"Failed to store receipt data in backend. Status code: {response.status_code}, Response: {response.text}")
+                await update.message.reply_text("The image is unclear. Please try again")
         except Exception as e:
             logger.error(f"Error sending receipt data to backend: {e}")
 
@@ -148,6 +149,9 @@ async def background_refine(update, raw_text, file_path):
             f"───────────────\n"
             f"💰 *TOTAL AMOUNT:* *Rp {total_amount:,}*\n"
         )
+
+    if not refined_data:
+        await update.message.reply_text("Make sure the image is clear")
         
     await update.message.reply_text(caption, parse_mode='Markdown')
     
