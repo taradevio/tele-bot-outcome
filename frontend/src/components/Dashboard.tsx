@@ -256,12 +256,12 @@ const UserDashboard = () => {
     enabled: !!userData,
   });
 
-  console.log(data)
-
+  
   useEffect(() => {
     if (data) {
       setTelegramUserProfile(data.userProfile);
       // setTelegramUser(data.userReceipts);
+      console.log("data dari be", data)
       console.log(`telegramUser: ${telegramUserProfile}`);
     }
   }, [data]);
