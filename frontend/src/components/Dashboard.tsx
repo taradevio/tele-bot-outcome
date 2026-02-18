@@ -641,7 +641,7 @@ const UserDashboard = () => {
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-semibold">
-                          Rp{formattedRupiah(total)}
+                          {formattedRupiah(total)}
                         </span>
                         {/* <span className="text-xs text-gray-300 ml-2">
                           {category.percentage}%
