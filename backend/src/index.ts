@@ -91,7 +91,7 @@ app.post("/process-receipt", async (c) => {
       }));
 
       // const receipt_items = payloadData.receipt;
-      console.log("ReceiptItems:", receiptItems)
+      console.log("ReceiptItems:", receiptItems);
 
       const { error: itemsError } = await db
         .from("receipt_items")
@@ -107,7 +107,9 @@ app.post("/process-receipt", async (c) => {
           500,
         );
       }
-       console.log(`Inserted ${receiptItems.length} items for receipt ID: ${receiptData.id}`);
+      console.log(
+        `Inserted ${receiptItems.length} items for receipt ID: ${receiptData.id}`,
+      );
     }
 
     if (receiptError) {
@@ -185,16 +187,17 @@ app.post(
     if (userError) return c.json({ error: userError.message }, 500);
 
     // const userId = c.req.query("user_id")
-    const userId = telegramUser.user_id;
+    // const userId = telegramUser.user_id;
 
     const { data: userReceipts, error: errorReceipts } = await db
       .from("receipts")
       .select(
-        "id, store_name, total_amount, created_at, receipt_items: {id, name, qty, price, total_price, category, created_at}",
+        "id, store_name, total_amount, created_at, receipt_items (id, name, qty, price, total_price, category, created_at)",
       )
       .eq("user_id", userProfile.id);
 
     if (errorReceipts) return c.json({ error: errorReceipts.message }, 500);
+    console.log(errorReceipts);
 
     console.log(userProfile, userReceipts);
 
