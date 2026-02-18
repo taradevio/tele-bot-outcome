@@ -49,6 +49,15 @@ interface TelegramUser {
   id?: string;
 }
 
+interface UserReceipts {
+  store_name: string;
+  total_price: number;
+  category: string;
+  transaction_date: string;
+  name: string;
+  qty: number;
+}
+
 const queryClient = new QueryClient();
 
 const chartData = [
@@ -181,6 +190,7 @@ export const Dashboard = () => {
 const UserDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [userData, setUserData] = useState<string | null>(null);
+  const [userReceipts, setUserReceipts] = useState<UserReceipts | null>(null)
   const [telegramUserProfile, setTelegramUserProfile] =
     useState<TelegramUser | null>(null);
   const [photoUrl, SetPhotoUrl] = useState<string | null>(null);
@@ -259,10 +269,11 @@ const UserDashboard = () => {
   
   useEffect(() => {
     if (data) {
-      setTelegramUserProfile(data.userProfile);
+      setTelegramUserProfile(data.userProfile.first_name);
+      setUserReceipts(data.userReceipts)
       // setTelegramUser(data.userReceipts);
-      console.log("data dari be", data)
-      console.log(`telegramUser: ${telegramUserProfile}`);
+      console.log("data dari be", userReceipts)
+      console.log("telegramUser:", telegramUserProfile);
     }
   }, [data]);
 
