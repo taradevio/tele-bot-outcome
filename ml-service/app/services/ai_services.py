@@ -169,8 +169,8 @@ async def refine_receipt(raw_text: str):
                 options={
                     "temperature": 0.2,
                     "num_predict": 1024,
-                    "top_k": 25,
-                    "top_p": 0.6
+                    "top_k": 30,
+                    "top_p": 0.7
                 }
 
             )
