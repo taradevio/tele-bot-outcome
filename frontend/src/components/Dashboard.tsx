@@ -224,7 +224,7 @@ const UserDashboard = () => {
           try {
             const decodeUser = JSON.parse(decodeURIComponent(userId));
             SetPhotoUrl(decodeUser.photo_url);
-            console.log("decoded user", decodeUser);
+            // console.log("decoded user", decodeUser);
             // console.log("user data", userData);
           } catch (error) {
             console.error("error decoding user data", error);
@@ -255,6 +255,8 @@ const UserDashboard = () => {
     },
     enabled: !!userData,
   });
+
+  console.log(data)
 
   useEffect(() => {
     if (data) {
