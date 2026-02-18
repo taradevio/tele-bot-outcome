@@ -63,13 +63,18 @@ app.post("/process-receipt", async (c) => {
       );
     }
 
+    const dateStr = payloadData.receipt.date;
+    const timeStr = payloadData.receipt.time;
+
+    const transactionDate = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+
     const { data: receiptData, error: receiptError } = await db
       .from("receipts")
       .insert({
         user_id: userData?.id,
         store_name: payloadData.receipt.merchant_name,
         total_amount: payloadData.receipt.total_amount,
-        transaction_date: payloadData.receipt.date || new Date().toISOString(),
+        transaction_date: transactionDate,
       })
       .select("id")
       .single();
@@ -192,7 +197,7 @@ app.post(
     const { data: userReceipts, error: errorReceipts } = await db
       .from("receipts")
       .select(
-        "id, store_name, total_amount, created_at, receipt_items (id, name, qty, price, total_price, category, created_at)",
+        "id, store_name, total_amount, transaction_date, receipt_items (id, name, qty, price, total_price, category, created_at)",
       )
       .eq("user_id", userProfile.id);
 
