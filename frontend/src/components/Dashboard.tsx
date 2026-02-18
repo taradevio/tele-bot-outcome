@@ -49,13 +49,22 @@ interface TelegramUser {
   id?: string;
 }
 
-interface UserReceipts {
-  store_name: string;
-  total_price: number;
-  category: string;
-  transaction_date: string;
+interface ReceiptItem {
+  id: string;
   name: string;
   qty: number;
+  price: number;
+  total_price: number;
+  category: string;
+  created_at: string;
+}
+
+interface UserReceipts {
+  id: string;
+  store_name: string;
+  total_amount: number;
+  transaction_date: string;
+  receipt_items: ReceiptItem[];
 }
 
 const queryClient = new QueryClient();
@@ -190,7 +199,7 @@ export const Dashboard = () => {
 const UserDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [userData, setUserData] = useState<string | null>(null);
-  const [userReceipts, setUserReceipts] = useState<UserReceipts | null>(null)
+  const [userReceipts, setUserReceipts] = useState<UserReceipts[]>([]);
   const [telegramUserProfile, setTelegramUserProfile] =
     useState<TelegramUser | null>(null);
   const [photoUrl, SetPhotoUrl] = useState<string | null>(null);
@@ -269,14 +278,20 @@ const UserDashboard = () => {
   
   useEffect(() => {
     if (data) {
-      setTelegramUserProfile(data.userProfile.first_name);
-      setUserReceipts(data.userReceipts)
+      setTelegramUserProfile(data.userProfile);
+      setUserReceipts(data.userReceipts);
       // setTelegramUser(data.userReceipts);
-      console.log("data dari be", userReceipts)
-      console.log("telegramUser:", telegramUserProfile);
+      // console.log("data dari be", userReceipts)
+      // console.log("telegramUser:", telegramUserProfile);
     }
   }, [data]);
+  
+  const flatItems = userReceipts?.flatMap(receipt => receipt.receipt_items)
 
+  const mapItems = flatItems.map((item) => item.category)
+
+  console.log("category", mapItems)
+  
   if (error) return "Data dari db kagak keangkut coy...";
 
   return (
