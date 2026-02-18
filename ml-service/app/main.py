@@ -135,14 +135,14 @@ async def background_refine(update, raw_text, file_path):
         category = item.get("category", "N/A")
         item_list += f"• {name} x{qty} @{price:,} - Rp {total:,}\n"
         
-    try:
-        clean_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d %b %Y")
-    except:
-        clean_date = date
+    # try:
+    #     clean_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d %b %Y")
+    # except:
+    #     clean_date = date
         
     caption = (
             f"🏪 *STORE:* {store_name.upper()}\n"
-            f"📅 *DATE:* {clean_date} | {time}\n"
+            f"📅 *DATE:* {date} | {time}\n"
             f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
             f"🛒 *PURCHASED ITEMS:*\n"
             f"{item_list}"

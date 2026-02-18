@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 custom_client = AsyncClient(
     host=os.getenv("OLLAMA_API_KEY", "http://localhost:11434"),
-    timeout=30 
+    timeout=50 
 )
 
 
@@ -67,44 +67,8 @@ async def refine_receipt(raw_text: str):
     receipt_id = str(uuid.uuid4())
 
     category_examples = get_category_examples(raw_text)
-
-    examples = """
-    CONTOH 1:
-    INPUT OCR: "ALFAMART \n TGL 02-01-2026 \n INDOMIE GORENG 3.000 \n CLEAR SHAMPOO 25.000 \n TOTAL 28.000"
-    OUTPUT JSON:
-    {
-      "receipt_id": "{receipt_id}",
-      "merchant_name": "ALFAMART",
-      "date": "2026-01-02",
-      "items": [
-        {"name": "INDOMIE GORENG", "qty": 1, "price": 3000, "total_price": 3000, "category": "Food & Beverage"},
-        {"name": "CLEAR SHAMPOO", "qty": 1, "price": 25000, "total_price": 25000, "category": "Shopping"}
-      ],
-      "total_amount": 28000
-    }
-
-     CONTOH 2:
-    INPUT OCR: "Cafe Eatery \n TGL 20-02-2025 \n Indomie Goreng 3.000 \n Cafe Latte 25.000 \n JUMLAH UANG 30.000 \n KEMBALI 2.000 TOTAL 28.000"
-    OUTPUT JSON:
-    {
-      "receipt_id": "{receipt_id}",
-      "merchant_name": "Cafe Eatery",
-      "date": "2026-02-20",
-      "items": [
-        {"name": "Indomie Goreng", "qty": 1, "price": 3000, "total_price": 3000, "category": "Food & Beverage"},
-        {"name": "Cafe Latte", "qty": 1, "price": 25000, "total_price": 25000, "category": "Shopping"}
-      ],
-      "total_amount": 28000
-    }
-    """
-
     prompt = f"""
     Kamu adalah sistem AI ekstraksi data profesional. Gunakan contoh format berikut untuk memproses data baru.
-
-    {examples}
-
-    Tugas: Ubah teks OCR berantakan ini menjadi JSON yang valid.
-    Bahasa: Support Bahasa Indonesia, Bahasa Inggris, dan Bahasa Jepang.
 
     DATA OCR:
     {raw_text}
@@ -130,17 +94,7 @@ async def refine_receipt(raw_text: str):
         - Contoh: "Jam :10:57" → "10:57", "10.57" → "10:57"
         - Jika tidak ditemukan date/time, gunakan null
         - PASTIKAN format date valid sebelum output!
-    5. KATEGORI: Pilih satu yang paling relevan: [Food & Beverage, Shopping, Transport, Bills, Health, Entertainment, Others].
 
-    VALIDASI WAJIB:
-    - total_amount HARUS sama dengan sum(total_price dari semua items)
-    - Kalau ada "JUMLAH UANG" atau "KEMBALI", jangan pakai itu sebagai total_amount
-    - total_amount adalah subtotal belanja, bukan uang dibayar/diterima
-
-    Think step by step:
-    1. Identifikasi mana TOTAL belanja (bukan JUMLAH UANG/KEMBALI)
-    2. Hitung sum dari semua items
-    3. Pastikan total_amount = sum(items) = TOTAL belanja (bukan JUMLAH UANG)
 
 
     FORMAT JSON YANG DIMINTA:
@@ -155,7 +109,6 @@ async def refine_receipt(raw_text: str):
       "total_amount": int
     }}
 
-    PANDUAN KATEGORI: [Food & Beverage, Shopping, Transport, Bills, Health, Entertainment, Others]
     Hanya berikan output dalam format JSON mentah tanpa penjelasan.
     """
 
@@ -163,14 +116,14 @@ async def refine_receipt(raw_text: str):
         logger.info(f"Sending prompt to Ollama for LLM processing for receipt ID: {receipt_id}")
 
         response = await custom_client.generate(
-                model="gpt-oss:120b-cloud",
+                model="gpt-oss:20b-cloud",
                 prompt=prompt,
                 format="json",
                 options={
-                    "temperature": 0.2,
-                    "num_predict": 1024,
-                    "top_k": 30,
-                    "top_p": 0.7
+                    "temperature": 0.3,
+                    # "num_predict": 600,
+                    "top_k": 20,
+                    "top_p": 0.6,
                 }
 
             )
@@ -179,14 +132,14 @@ async def refine_receipt(raw_text: str):
             response_data = json.loads(response['response'])
             response_data['receipt_id'] = receipt_id
 
-            # print("--- REFINED RECEIPT START ---")
-            # print(response_data)
-            # print("--- REFINED RECEIPT END ---")
+            print("--- REFINED RECEIPT START ---")
+            print(response_data)
+            print("--- REFINED RECEIPT END ---")
 
             return response_data
 
         except:
-            return {"error": "failed", "receipt_id": receipt_id}
+            return {"error": "failed", "receipt_id": receipt_id, "response": response}
     
     except Exception as e:
         logger.error(f"Ollama LLM processing failed for receipt ID {receipt_id}: {e}")
