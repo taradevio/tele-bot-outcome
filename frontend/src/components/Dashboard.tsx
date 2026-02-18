@@ -5,6 +5,7 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
+import { formattedRupiah } from "@/utils/currency";
 
 // import { useQuery } from "@tanstack/react-query";
 import {
@@ -125,48 +126,48 @@ const budgetData = {
 };
 
 // Category spending data
-const categoryData = [
-  {
-    id: 1,
-    name: "Food & Dining",
-    icon: "🍔",
-    amount: 820.5,
-    percentage: 33.5,
-    color: "bg-orange-500",
-  },
-  {
-    id: 2,
-    name: "Transport",
-    icon: "🚗",
-    amount: 450.0,
-    percentage: 18.4,
-    color: "bg-blue-500",
-  },
-  {
-    id: 3,
-    name: "Entertainment",
-    icon: "🎮",
-    amount: 380.0,
-    percentage: 15.5,
-    color: "bg-purple-500",
-  },
-  {
-    id: 4,
-    name: "Shopping",
-    icon: "🛍️",
-    amount: 520.0,
-    percentage: 21.2,
-    color: "bg-pink-500",
-  },
-  {
-    id: 5,
-    name: "Bills & Utilities",
-    icon: "💡",
-    amount: 279.5,
-    percentage: 11.4,
-    color: "bg-green-500",
-  },
-];
+// const categoryData = [
+//   {
+//     id: 1,
+//     name: "Food & Dining",
+//     icon: "🍔",
+//     amount: 820.5,
+//     percentage: 33.5,
+//     color: "bg-orange-500",
+//   },
+//   {
+//     id: 2,
+//     name: "Transport",
+//     icon: "🚗",
+//     amount: 450.0,
+//     percentage: 18.4,
+//     color: "bg-blue-500",
+//   },
+//   {
+//     id: 3,
+//     name: "Entertainment",
+//     icon: "🎮",
+//     amount: 380.0,
+//     percentage: 15.5,
+//     color: "bg-purple-500",
+//   },
+//   {
+//     id: 4,
+//     name: "Shopping",
+//     icon: "🛍️",
+//     amount: 520.0,
+//     percentage: 21.2,
+//     color: "bg-pink-500",
+//   },
+//   {
+//     id: 5,
+//     name: "Bills & Utilities",
+//     icon: "💡",
+//     amount: 279.5,
+//     percentage: 11.4,
+//     color: "bg-green-500",
+//   },
+// ];
 
 // const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -288,7 +289,7 @@ const UserDashboard = () => {
   
   const flatItems = userReceipts?.flatMap(receipt => receipt.receipt_items)
 
-  // const mapItems = flatItems.map((item) => item.category)
+  // const mapItems = flatItems.map((item) => item.total)
 
   const categoryTotals = flatItems.reduce((acc, item) => {
   acc[item.category] = (acc[item.category] || 0) + item.total_price;
@@ -640,7 +641,7 @@ const UserDashboard = () => {
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-semibold">
-                          Rp{total.toFixed(2)}
+                          Rp{formattedRupiah(total)}
                         </span>
                         {/* <span className="text-xs text-gray-300 ml-2">
                           {category.percentage}%
