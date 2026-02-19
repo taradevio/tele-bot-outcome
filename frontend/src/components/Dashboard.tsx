@@ -762,7 +762,7 @@ const UserDashboard = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">
-                        ${formattedRupiah(store.total_amount)}
+                        {formattedRupiah(store.total_amount)}
                       </p>
                       {/* <div
                         className={`flex items-center justify-end gap-1 text-sm ${
