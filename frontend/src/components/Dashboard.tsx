@@ -6,6 +6,7 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import { formattedRupiah } from "@/utils/currency";
+// import { transformCategoryData } from "@/utils/categoryHelpers";
 
 // import { useQuery } from "@tanstack/react-query";
 import {
@@ -13,8 +14,8 @@ import {
   Search,
   //   SlidersHorizontal,
   TrendingUp,
-  ArrowUp,
-  ArrowDown,
+  // ArrowUp,
+  // ArrowDown,
   ArrowUpDown,
   Upload,
   House,
@@ -77,38 +78,38 @@ const chartData = [
   { week: "Week 4", spending: null, budget: 750, predicted: 800 },
 ];
 
-const storeData = [
-  {
-    id: 1,
-    name: "Walmart",
-    logo: "W",
-    bgColor: "bg-green-600",
-    transactions: 8,
-    amount: 432.5,
-    change: 12.5,
-    isUp: true,
-  },
-  {
-    id: 2,
-    name: "Amazon",
-    logo: "a",
-    bgColor: "bg-gradient-to-br from-gray-800 to-yellow-600",
-    transactions: 14,
-    amount: 289.9,
-    change: 3.2,
-    isUp: false,
-  },
-  {
-    id: 3,
-    name: "Target",
-    logo: "◎",
-    bgColor: "bg-red-600",
-    transactions: 3,
-    amount: 145.2,
-    change: 8.4,
-    isUp: true,
-  },
-];
+// const storeData = [
+//   {
+//     id: 1,
+//     name: "Walmart",
+//     logo: "W",
+//     bgColor: "bg-green-600",
+//     transactions: 8,
+//     amount: 432.5,
+//     change: 12.5,
+//     isUp: true,
+//   },
+//   {
+//     id: 2,
+//     name: "Amazon",
+//     logo: "a",
+//     bgColor: "bg-gradient-to-br from-gray-800 to-yellow-600",
+//     transactions: 14,
+//     amount: 289.9,
+//     change: 3.2,
+//     isUp: false,
+//   },
+//   {
+//     id: 3,
+//     name: "Target",
+//     logo: "◎",
+//     bgColor: "bg-red-600",
+//     transactions: 3,
+//     amount: 145.2,
+//     change: 8.4,
+//     isUp: true,
+//   },
+// ];
 
 const navItems = [
   { id: 1, name: "Home", icon: House, active: true },
@@ -288,6 +289,7 @@ const UserDashboard = () => {
   }, [data]);
   
   const flatItems = userReceipts?.flatMap(receipt => receipt.receipt_items)
+  console.log("userReceipts", userReceipts)
 
   // const mapItems = flatItems.map((item) => item.total)
 
@@ -690,26 +692,26 @@ const UserDashboard = () => {
                     </CardContent>
                   </Card>
                 ))
-            : storeData.map((store) => (
+            : userReceipts.map((store) => (
                 <Card
                   key={store.id}
                   className="bg-[#1a2129] border-none rounded-xl text-white"
                 >
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div
+                      {/* <div
                         className={`h-11 w-11 ${store.bgColor} rounded-xl flex items-center justify-center text-white font-bold text-lg`}
                       >
                         {store.logo}
-                      </div>
+                      </div> */}
                       <div>
-                        <p className="font-medium">{store.name}</p>
+                        <p className="font-medium">{store.store_name}</p>
                         <p className="text-sm text-gray-300">
-                          {store.transactions} transactions
+                          50 transactions
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    {/* <div className="text-right">
                       <p className="font-semibold">
                         ${store.amount.toFixed(2)}
                       </p>
@@ -725,7 +727,7 @@ const UserDashboard = () => {
                         )}
                         <span>{store.change}%</span>
                       </div>
-                    </div>
+                    </div> */}
                   </CardContent>
                 </Card>
               ))}
