@@ -314,11 +314,13 @@ const UserDashboard = () => {
           acc[key] = {
             store_name: key,
             transaction_count: 0,
+            total_amount: 0,
             receipts: [],
           };
         }
 
         acc[key].transaction_count += 1;
+        acc[key].total_amount += receipt.total_amount;
         acc[key].receipts.push(receipt); // optional, kalo lo mau drill down nanti
 
         return acc;
@@ -328,6 +330,7 @@ const UserDashboard = () => {
         {
           store_name: string;
           transaction_count: number;
+          total_amount: number;
           receipts: typeof userReceipts;
         }
       >,
@@ -757,11 +760,11 @@ const UserDashboard = () => {
                         <p className="text-sm text-gray-300">{store.transaction_count} transactions</p>
                       </div>
                     </div>
-                    {/* <div className="text-right">
+                    <div className="text-right">
                       <p className="font-semibold">
-                        ${store.amount.toFixed(2)}
+                        ${formattedRupiah(store.total_amount)}
                       </p>
-                      <div
+                      {/* <div
                         className={`flex items-center justify-end gap-1 text-sm ${
                           store.isUp ? "text-green-400" : "text-red-400"
                         }`}
@@ -772,8 +775,8 @@ const UserDashboard = () => {
                           <ArrowDown className="h-3 w-3" />
                         )}
                         <span>{store.change}%</span>
-                      </div>
-                    </div> */}
+                      </div> */}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
