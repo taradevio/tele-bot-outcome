@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { CustomTooltip } from "./CustomChartTooltip";
 import {
   QueryClient,
@@ -277,7 +277,6 @@ const UserDashboard = () => {
     enabled: !!userData,
   });
 
-  
   useEffect(() => {
     if (data) {
       setTelegramUserProfile(data.userProfile);
@@ -287,19 +286,70 @@ const UserDashboard = () => {
       // console.log("telegramUser:", telegramUserProfile);
     }
   }, [data]);
-  
-  const flatItems = userReceipts?.flatMap(receipt => receipt.receipt_items)
-  console.log("userReceipts", userReceipts)
+
+  // const groupedStores = useMemo(() => {
+  //   const storeMap = userReceipts.reduce((acc, item) => {
+  //     const key = item.store_name.trim().toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())
+
+  //     if(!acc[key]) {
+  //       acc[key] = {
+  //         store_name : key,
+  //         transaction_count: 0,
+  //         receipts: []
+  //       }
+  //     }
+
+  //     acc[key].transaction_count += 1;
+  //     acc]key].receipts.push[receipt]
+  //   })
+  // }, [userReceipts])
+
+
+  const groupedStores = useMemo(() => {
+    const storeMap = userReceipts.reduce(
+      (acc, receipt) => {
+        const key = receipt.store_name.trim().toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+
+        if (!acc[key]) {
+          acc[key] = {
+            store_name: key,
+            transaction_count: 0,
+            receipts: [],
+          };
+        }
+
+        acc[key].transaction_count += 1;
+        acc[key].receipts.push(receipt); // optional, kalo lo mau drill down nanti
+
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          store_name: string;
+          transaction_count: number;
+          receipts: typeof userReceipts;
+        }
+      >,
+    );
+
+    return Object.values(storeMap);
+  }, [userReceipts]);
+  const flatItems = userReceipts?.flatMap((receipt) => receipt.receipt_items);
+  console.log("userReceipts", userReceipts);
 
   // const mapItems = flatItems.map((item) => item.total)
 
-  const categoryTotals = flatItems.reduce((acc, item) => {
-  acc[item.category] = (acc[item.category] || 0) + item.total_price;
-  return acc;
-}, {} as Record<string, number>);
+  const categoryTotals = flatItems.reduce(
+    (acc, item) => {
+      acc[item.category] = (acc[item.category] || 0) + item.total_price;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
-  console.log("category", categoryTotals)
-  
+  console.log("category", categoryTotals);
+
   if (error) return "Data dari db kagak keangkut coy...";
 
   return (
@@ -633,13 +683,11 @@ const UserDashboard = () => {
                     </div>
                   ))
               : Object.entries(categoryTotals).map(([category, total]) => (
-                <div key={category}>
+                  <div key={category}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         {/* <span className="text-lg">{category.icon}</span> */}
-                        <span className="text-sm font-medium">
-                          {category}
-                        </span>
+                        <span className="text-sm font-medium">{category}</span>
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-semibold">
@@ -657,7 +705,7 @@ const UserDashboard = () => {
                       />
                     </div> */}
                   </div>
-              ))}
+                ))}
           </CardContent>
         </Card>
       </div>
@@ -692,9 +740,9 @@ const UserDashboard = () => {
                     </CardContent>
                   </Card>
                 ))
-            : userReceipts.map((store) => (
+            : groupedStores.map((store) => (
                 <Card
-                  key={store.id}
+                  key={store.store_name}
                   className="bg-[#1a2129] border-none rounded-xl text-white"
                 >
                   <CardContent className="p-4 flex items-center justify-between">
@@ -706,9 +754,7 @@ const UserDashboard = () => {
                       </div> */}
                       <div>
                         <p className="font-medium">{store.store_name}</p>
-                        <p className="text-sm text-gray-300">
-                          50 transactions
-                        </p>
+                        <p className="text-sm text-gray-300">{store.transaction_count} transactions</p>
                       </div>
                     </div>
                     {/* <div className="text-right">
