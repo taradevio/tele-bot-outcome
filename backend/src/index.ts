@@ -66,7 +66,9 @@ app.post("/process-receipt", async (c) => {
     const dateStr = payloadData.receipt.date;
     const timeStr = payloadData.receipt.time;
 
-    const transactionDate = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+    const safeTime = timeStr ? timeStr : '00:00:00';
+
+    const transactionDate = new Date(`${dateStr}T${safeTime}`).toISOString();
 
     const { data: receiptData, error: receiptError } = await db
       .from("receipts")
