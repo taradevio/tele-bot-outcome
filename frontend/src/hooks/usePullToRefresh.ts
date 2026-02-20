@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 
 export const usePullToRefresh = (onRefresh: () => Promise<void>) => {
   const [startY, setStartY] = useState(0);

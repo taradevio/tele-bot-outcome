@@ -9,14 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as ReceiptRouteImport } from './routes/receipt'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ReceiptsIndexRouteImport } from './routes/receipts/index'
 import { Route as ReceiptsActionRequiredRouteImport } from './routes/receipts/action-required'
 
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReceiptRoute = ReceiptRouteImport.update({
   id: '/receipt',
   path: '/receipt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,45 +49,86 @@ const ReceiptsActionRequiredRoute = ReceiptsActionRequiredRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/profile': typeof ProfileRoute
   '/receipt': typeof ReceiptRoute
+  '/stats': typeof StatsRoute
   '/receipts/action-required': typeof ReceiptsActionRequiredRoute
   '/receipts/': typeof ReceiptsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/profile': typeof ProfileRoute
   '/receipt': typeof ReceiptRoute
+  '/stats': typeof StatsRoute
   '/receipts/action-required': typeof ReceiptsActionRequiredRoute
   '/receipts': typeof ReceiptsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/profile': typeof ProfileRoute
   '/receipt': typeof ReceiptRoute
+  '/stats': typeof StatsRoute
   '/receipts/action-required': typeof ReceiptsActionRequiredRoute
   '/receipts/': typeof ReceiptsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/receipt' | '/receipts/action-required' | '/receipts/'
+  fullPaths:
+    | '/'
+    | '/profile'
+    | '/receipt'
+    | '/stats'
+    | '/receipts/action-required'
+    | '/receipts/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/receipt' | '/receipts/action-required' | '/receipts'
-  id: '__root__' | '/' | '/receipt' | '/receipts/action-required' | '/receipts/'
+  to:
+    | '/'
+    | '/profile'
+    | '/receipt'
+    | '/stats'
+    | '/receipts/action-required'
+    | '/receipts'
+  id:
+    | '__root__'
+    | '/'
+    | '/profile'
+    | '/receipt'
+    | '/stats'
+    | '/receipts/action-required'
+    | '/receipts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ProfileRoute: typeof ProfileRoute
   ReceiptRoute: typeof ReceiptRoute
+  StatsRoute: typeof StatsRoute
   ReceiptsActionRequiredRoute: typeof ReceiptsActionRequiredRoute
   ReceiptsIndexRoute: typeof ReceiptsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/receipt': {
       id: '/receipt'
       path: '/receipt'
       fullPath: '/receipt'
       preLoaderRoute: typeof ReceiptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -104,7 +157,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ProfileRoute: ProfileRoute,
   ReceiptRoute: ReceiptRoute,
+  StatsRoute: StatsRoute,
   ReceiptsActionRequiredRoute: ReceiptsActionRequiredRoute,
   ReceiptsIndexRoute: ReceiptsIndexRoute,
 }

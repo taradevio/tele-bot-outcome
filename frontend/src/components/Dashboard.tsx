@@ -18,10 +18,10 @@ import {
   // ArrowDown,
   ArrowUpDown,
   Upload,
-  House,
-  Receipt,
-  ChartPie,
-  User,
+  // House,
+  // Receipt,
+  // ChartPie,
+  // User,
   X,
 } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
