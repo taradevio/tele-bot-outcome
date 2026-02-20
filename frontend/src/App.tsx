@@ -1,18 +1,16 @@
-// import { Navbar } from "./components/Navbar";
-// import { Chart } from "./components/Chart";
-// import { Search } from "./components/Search";
-// import { Dashboard } from "./components/Dashboard";
-import { Dashboard } from "./components/Dashboard";
+import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { routeTree } from "./routeTree.gen";
+
+const router = createRouter({ routeTree });
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
 
 function App() {
-  return (
-    <div>
-      {/* <Search />
-      <Chart />
-      <Navbar /> */}
-      <Dashboard />
-    </div>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

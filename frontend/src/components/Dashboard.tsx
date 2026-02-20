@@ -111,13 +111,6 @@ const chartData = [
 //   },
 // ];
 
-const navItems = [
-  { id: 1, name: "Home", icon: House, active: true },
-  { id: 2, name: "Receipts", icon: Receipt, active: false },
-  { id: 3, name: "Stats", icon: ChartPie, active: false },
-  { id: 4, name: "Profile", icon: User, active: false },
-];
-
 // Budget data
 const budgetData = {
   monthly: 3000,
@@ -304,11 +297,13 @@ const UserDashboard = () => {
   //   })
   // }, [userReceipts])
 
-
   const groupedStores = useMemo(() => {
     const storeMap = userReceipts.reduce(
       (acc, receipt) => {
-        const key = receipt.store_name.trim().toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+        const key = receipt.store_name
+          .trim()
+          .toLowerCase()
+          .replace(/\b\w/g, (char) => char.toUpperCase());
 
         if (!acc[key]) {
           acc[key] = {
@@ -356,7 +351,7 @@ const UserDashboard = () => {
   if (error) return "Data dari db kagak keangkut coy...";
 
   return (
-    <div className="min-h-screen bg-[#0f1419] text-white pb-24">
+    <div className="pb-24">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-6 pb-4">
         <div className="flex items-center gap-3">
@@ -757,7 +752,9 @@ const UserDashboard = () => {
                       </div> */}
                       <div>
                         <p className="font-medium">{store.store_name}</p>
-                        <p className="text-sm text-gray-300">{store.transaction_count} transactions</p>
+                        <p className="text-sm text-gray-300">
+                          {store.transaction_count} transactions
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -796,21 +793,6 @@ const UserDashboard = () => {
           <Upload className="h-5 w-5 mr-2" />
           Export Data
         </Button>
-      </div>
-
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#0f1419] border-t border-gray-800 px-8 py-3">
-        <div className="flex items-center justify-between">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`flex flex-col items-center gap-1 ${item.active ? "text-blue-400" : "text-gray-400"}`}
-            >
-              <item.icon className="h-5 w-5" />
-              <span className="text-xs">{item.name}</span>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

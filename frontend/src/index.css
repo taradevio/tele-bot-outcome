@@ -121,3 +121,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Hide scrollbar for horizontal scroll areas */
+@utility scrollbar-hide {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
