@@ -2,67 +2,24 @@ import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Receipt } from "@/types";
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { ReceiptEditModal } from "./ReceiptEditModal";
 import { Card, CardContent } from "@/components/ui/card";
 import { formattedRupiah } from "@/utils/currency";
 
-// Mock data (shared with ReceiptsPage)
-const mockReceipts: Receipt[] = [
-  {
-    id: "1",
-    store_name: "Grocery Mart",
-    total_amount: 45200,
-    transaction_date: new Date().toISOString(),
-    status: "action-required",
-    confidence: 0.65,
-    tax: 3500,
-    receipt_items: [
-      {
-        id: "1a",
-        name: "Rice 5kg",
-        qty: 1,
-        price: 15000,
-        total_price: 15000,
-        category: "Groceries",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "1b",
-        name: "Cooking Oil",
-        qty: 2,
-        price: 8000,
-        total_price: 16000,
-        category: "Groceries",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "1c",
-        name: "Eggs",
-        qty: 1,
-        price: 14200,
-        total_price: 14200,
-        category: "Groceries",
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: "11",
-    store_name: "Supermarket Plus",
-    total_amount: 89000,
-    transaction_date: new Date().toISOString(),
-    status: "action-required",
-    confidence: 0.45,
-    receipt_items: [],
-  },
-];
-
 export const ActionRequiredPage = () => {
   const navigate = useNavigate();
-  const [receipts, setReceipts] = useState<Receipt[]>(mockReceipts);
+  const [receipts, setReceipts] = useState<Receipt[]>(() => {
+    const saved = localStorage.getItem("mock_receipts");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Sync with localStorage
+  useEffect(() => {
+    localStorage.setItem("mock_receipts", JSON.stringify(receipts));
+  }, [receipts]);
 
   const actionRequiredReceipts = useMemo(
     () => receipts.filter((r) => r.status === "action-required"),

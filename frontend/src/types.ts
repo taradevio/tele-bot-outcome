@@ -15,9 +15,10 @@ export interface Receipt {
   total_amount: number;
   tax?: number;
   transaction_date: string;
-  status: "pending" | "action-required" | "verified" | "split";
+  status: "pending" | "action-required" | "verified";
   receipt_items: ReceiptItem[];
   confidence?: number;
+  edited_fields?: string[];
   image_url?: string;
 }
 

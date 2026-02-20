@@ -92,7 +92,7 @@ const mockReceipts: Receipt[] = [
     store_name: "Coffee House",
     total_amount: 64500,
     transaction_date: "2023-10-23T08:15:00.000Z",
-    status: "split",
+    status: "verified",
     receipt_items: [
       {
         id: "3a",
@@ -127,20 +127,32 @@ export const ReceiptsPage = () => {
     status: string | null;
   }>({ date: null, store: null, status: null });
 
-  // Data state
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  // Data state with localStorage persistence
+  const [receipts, setReceipts] = useState<Receipt[]>(() => {
+    const saved = localStorage.getItem("mock_receipts");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Edit Modal State
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Simulate initial fetch
+  // Initial fetch/sync
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const saved = localStorage.getItem("mock_receipts");
+    if (!saved || JSON.parse(saved).length === 0) {
       setReceipts(mockReceipts);
-      setIsLoading(false);
-    }, 1500); // 1.5s delay to show skeleton
+    }
+    const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Persist changes
+  useEffect(() => {
+    if (receipts.length > 0) {
+      localStorage.setItem("mock_receipts", JSON.stringify(receipts));
+    }
+  }, [receipts]);
 
   // Pull to refresh handler
   const handleRefresh = async () => {
@@ -254,6 +266,14 @@ export const ReceiptsPage = () => {
     setIsEditModalOpen(true);
   }, []);
 
+  const handleStatusClick = useCallback(
+    (receipt: Receipt) => {
+      if (receipt.status === "verified" || receipt.status === "pending") {
+        handleReviewReceipt(receipt);
+      }
+    },
+    [handleReviewReceipt],
+  );
   const handleSaveReceipt = useCallback((updatedReceipt: Receipt) => {
     setReceipts((prev) =>
       prev.map((r) => (r.id === updatedReceipt.id ? updatedReceipt : r)),
@@ -266,7 +286,6 @@ export const ReceiptsPage = () => {
 
   const isReadOnly =
     selectedReceipt?.status === "verified" ||
-    selectedReceipt?.status === "split" ||
     selectedReceipt?.status === "pending";
 
   if (isLoading) {
@@ -336,15 +355,7 @@ export const ReceiptsPage = () => {
               <RecentActivityList
                 receipts={recentActivityResults}
                 onReceiptClick={handleReviewReceipt}
-                onStatusClick={(receipt) => {
-                  if (
-                    receipt.status === "verified" ||
-                    receipt.status === "split" ||
-                    receipt.status === "pending"
-                  ) {
-                    handleReviewReceipt(receipt);
-                  }
-                }}
+                onStatusClick={handleStatusClick}
               />
             )}
           </>

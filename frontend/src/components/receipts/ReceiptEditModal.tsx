@@ -77,7 +77,45 @@ export const ReceiptEditModal = ({
   const totalMismatch = Math.abs(itemsTotal - editedReceipt.total_amount) > 100; // Allow small rounding diff
 
   const handleSave = () => {
-    onSave({ ...editedReceipt, status: "pending" });
+    // If it was action-required, it moves to pending.
+    // If it was pending (already processing), we might want to manually 'verify' it for testing.
+    const nextStatus =
+      editedReceipt.status === "action-required" ? "pending" : "verified";
+
+    // Track what was edited
+    const editedFields: string[] = [...(editedReceipt.edited_fields || [])];
+
+    if (
+      editedReceipt.store_name !== receipt.store_name &&
+      !editedFields.includes("store_name")
+    ) {
+      editedFields.push("store_name");
+    }
+    if (
+      editedReceipt.total_amount !== receipt.total_amount &&
+      !editedFields.includes("total_amount")
+    ) {
+      editedFields.push("total_amount");
+    }
+    if (
+      editedReceipt.transaction_date !== receipt.transaction_date &&
+      !editedFields.includes("transaction_date")
+    ) {
+      editedFields.push("transaction_date");
+    }
+    if (
+      JSON.stringify(editedReceipt.receipt_items) !==
+        JSON.stringify(receipt.receipt_items) &&
+      !editedFields.includes("items")
+    ) {
+      editedFields.push("items");
+    }
+
+    onSave({
+      ...editedReceipt,
+      status: nextStatus,
+      edited_fields: editedFields,
+    });
     onClose();
   };
 
@@ -239,9 +277,19 @@ export const ReceiptEditModal = ({
                   </div>
                   <div>
                     {isReadOnly ? (
-                      <h2 className="text-xl font-bold text-white leading-tight">
-                        {receipt.store_name}
-                      </h2>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-xl font-bold text-white leading-tight">
+                            {receipt.store_name}
+                          </h2>
+                          {receipt.status === "pending" &&
+                            receipt.edited_fields?.includes("store_name") && (
+                              <span className="text-[10px] text-blue-400 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded leading-none border border-blue-500/20">
+                                EDITED
+                              </span>
+                            )}
+                        </div>
+                      </div>
                     ) : (
                       <>
                         <label className="text-gray-400 text-sm mb-1.5 block">
@@ -259,23 +307,42 @@ export const ReceiptEditModal = ({
                         />
                       </>
                     )}
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {new Date(receipt.transaction_date).toLocaleDateString(
-                        "en-US",
-                        { month: "short", day: "numeric", year: "numeric" },
-                      )}{" "}
-                      •{" "}
-                      {new Date(receipt.transaction_date).toLocaleTimeString(
-                        [],
-                        { hour: "2-digit", minute: "2-digit" },
-                      )}
+                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                      <span>
+                        {new Date(receipt.transaction_date).toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric", year: "numeric" },
+                        )}{" "}
+                        •{" "}
+                        {new Date(receipt.transaction_date).toLocaleTimeString(
+                          [],
+                          { hour: "2-digit", minute: "2-digit" },
+                        )}
+                      </span>
+                      {receipt.status === "pending" &&
+                        receipt.edited_fields?.includes("transaction_date") && (
+                          <span className="text-[9px] text-blue-400 font-bold">
+                            (Edited)
+                          </span>
+                        )}
                     </div>
                   </div>
                 </div>
 
                 {isReadOnly && (
-                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30 rounded-full py-0.5 px-2 text-[10px] flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> VERIFIED
+                  <Badge
+                    className={`rounded-full py-0.5 px-2 text-[10px] flex items-center gap-1 border border-transparent ${
+                      receipt.status === "verified"
+                        ? "bg-green-500/20 text-green-400 border-green-500/30"
+                        : "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                    }`}
+                  >
+                    {receipt.status === "verified" ? (
+                      <CheckCircle2 className="h-3 w-3" />
+                    ) : (
+                      <Clock className="h-3 w-3" />
+                    )}
+                    {receipt.status.toUpperCase()}
                   </Badge>
                 )}
               </div>
@@ -289,7 +356,7 @@ export const ReceiptEditModal = ({
                 </div>
               )}
 
-              {!isReadOnly && (
+              {!isReadOnly ? (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     {/* Date */}
@@ -377,6 +444,31 @@ export const ReceiptEditModal = ({
                     </div>
                   </div>
                 </>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="bg-[#1a2129] p-4 rounded-2xl border border-gray-800/50">
+                    <p className="text-xs text-gray-500 font-bold mb-1">
+                      TOTAL AMOUNT
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl font-black text-white">
+                        {formattedRupiah(receipt.total_amount)}
+                      </p>
+                      {receipt.status === "pending" &&
+                        receipt.edited_fields?.includes("total_amount") && (
+                          <span className="text-[9px] text-blue-400 font-bold">
+                            (Edited)
+                          </span>
+                        )}
+                    </div>
+                  </div>
+                  <div className="bg-[#1a2129] p-4 rounded-2xl border border-gray-800/50">
+                    <p className="text-xs text-gray-500 font-bold mb-1">TAX</p>
+                    <p className="text-xl font-bold text-gray-300">
+                      {formattedRupiah(receipt.tax || 0)}
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -397,7 +489,24 @@ export const ReceiptEditModal = ({
                 >
                   Items
                 </h3>
+                {isReadOnly &&
+                  receipt.status === "pending" &&
+                  receipt.edited_fields?.includes("items") && (
+                    <span className="text-[10px] text-blue-400 font-bold ml-2">
+                      (Edited)
+                    </span>
+                  )}
               </div>
+              {isReadOnly && receipt.status === "verified" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-blue-500 hover:text-blue-400 font-bold p-0 h-auto flex items-center gap-1.5"
+                >
+                  <GitMerge className="h-3.5 w-3.5" />
+                  Split Bill
+                </Button>
+              )}
               {!isReadOnly && (
                 <Button
                   variant="ghost"
@@ -419,9 +528,16 @@ export const ReceiptEditModal = ({
                   {isReadOnly ? (
                     <>
                       <div className="flex flex-col">
-                        <span className="text-white font-medium">
-                          {item.name}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-medium">
+                            {item.name}
+                          </span>
+                          {item.qty > 1 && (
+                            <span className="text-[10px] text-gray-500 font-bold bg-gray-800/50 px-1.5 rounded">
+                              x{item.qty}
+                            </span>
+                          )}
+                        </div>
                         {item.category && (
                           <span className="text-xs text-gray-500 italic">
                             {item.category}
@@ -434,9 +550,9 @@ export const ReceiptEditModal = ({
                     </>
                   ) : (
                     <>
-                      <div className="flex items-end gap-3 mb-2">
+                      <div className="flex items-end gap-2 mb-2">
                         <div className="flex-1">
-                          <label className="text-xs text-gray-500 mb-1 block">
+                          <label className="text-[10px] text-gray-500 mb-1 block">
                             Item Name
                           </label>
                           <DarkInput
@@ -444,25 +560,46 @@ export const ReceiptEditModal = ({
                             onChange={(e) =>
                               updateItem(idx, { name: e.target.value })
                             }
-                            className="rounded-b-none border-b-0 focus:border-b"
+                            className="text-sm h-9"
+                          />
+                        </div>
+                        <div className="w-12">
+                          <label className="text-[10px] text-gray-500 mb-1 block">
+                            Qty
+                          </label>
+                          <DarkInput
+                            type="number"
+                            min="1"
+                            value={item.qty}
+                            onChange={(e) => {
+                              const qty = Math.max(1, Number(e.target.value));
+                              updateItem(idx, {
+                                qty,
+                                total_price: qty * item.price,
+                              });
+                            }}
+                            className="text-sm h-9 px-2 text-center"
                           />
                         </div>
                         <div className="w-24">
-                          <label className="text-xs text-gray-500 mb-1 block text-right">
+                          <label className="text-[10px] text-gray-500 mb-1 block text-right">
                             Price
                           </label>
                           <div className="relative">
-                            <span className="absolute left-2 top-2 text-gray-500 text-sm">
+                            <span className="absolute left-2 top-2 text-gray-500 text-xs">
                               $
                             </span>
                             <DarkInput
-                              value={item.total_price}
-                              onChange={(e) =>
+                              type="number"
+                              value={item.price}
+                              onChange={(e) => {
+                                const price = Number(e.target.value);
                                 updateItem(idx, {
-                                  total_price: Number(e.target.value),
-                                })
-                              }
-                              className="text-right pl-5 rounded-b-none border-b-0"
+                                  price,
+                                  total_price: item.qty * price,
+                                });
+                              }}
+                              className="text-right pl-4 text-sm h-9"
                             />
                           </div>
                         </div>
@@ -470,17 +607,12 @@ export const ReceiptEditModal = ({
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDeleteItem(item.id)}
-                          className="text-gray-500 hover:text-red-500 mb-1"
+                          className="text-gray-500 hover:text-red-500 mb-0.5 h-9 w-9"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="w-full h-px bg-gray-800" />
-                      {idx === 2 && ( // Example low confidence indicator
-                        <div className="flex items-center justify-end gap-1 mt-1">
-                          <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                        </div>
-                      )}
+                      <div className="w-full h-[0.5px] bg-gray-800/50" />
                     </>
                   )}
                 </div>
@@ -535,10 +667,6 @@ export const ReceiptEditModal = ({
       <div className="p-4 bg-[#0f1419] border-t border-gray-800 shrink-0 mb-4 space-y-3">
         {isReadOnly ? (
           <>
-            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-14 text-lg font-bold">
-              <GitMerge className="mr-2 h-5 w-5 rotate-90" />
-              Split this Bill
-            </Button>
             <Button
               variant="outline"
               className="w-full bg-transparent border-gray-800 text-white rounded-xl h-14 text-lg font-bold"
