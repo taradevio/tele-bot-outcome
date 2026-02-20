@@ -19,7 +19,7 @@ const mockReceipts: Receipt[] = [
     store_name: "Grocery Mart",
     total_amount: 45200,
     transaction_date: new Date().toISOString(),
-    status: "pending",
+    status: "action-required",
     confidence: 0.65,
     tax: 3500,
     receipt_items: [
@@ -51,6 +51,14 @@ const mockReceipts: Receipt[] = [
         created_at: new Date().toISOString(),
       },
     ],
+  },
+  {
+    id: "10",
+    store_name: "Unidentified Store",
+    total_amount: 15000,
+    transaction_date: new Date().toISOString(),
+    status: "pending",
+    receipt_items: [],
   },
   {
     id: "2",
@@ -106,96 +114,6 @@ const mockReceipts: Receipt[] = [
       },
     ],
   },
-  {
-    id: "4",
-    store_name: "Electronics Store",
-    total_amount: 2499900,
-    transaction_date: "2023-10-20T13:20:00.000Z",
-    status: "verified",
-    receipt_items: [
-      {
-        id: "4a",
-        name: "USB-C Cable",
-        qty: 2,
-        price: 75000,
-        total_price: 150000,
-        category: "Electronics",
-        created_at: "2023-10-20T13:20:00.000Z",
-      },
-      {
-        id: "4b",
-        name: "Wireless Mouse",
-        qty: 1,
-        price: 2349900,
-        total_price: 2349900,
-        category: "Electronics",
-        created_at: "2023-10-20T13:20:00.000Z",
-      },
-    ],
-  },
-  {
-    id: "5",
-    store_name: "Grocery Mart",
-    total_amount: 87000,
-    transaction_date: "2023-10-19T10:00:00.000Z",
-    status: "pending",
-    receipt_items: [
-      {
-        id: "5a",
-        name: "Milk 1L",
-        qty: 2,
-        price: 18000,
-        total_price: 36000,
-        category: "Groceries",
-        created_at: "2023-10-19T10:00:00.000Z",
-      },
-      {
-        id: "5b",
-        name: "Bread",
-        qty: 1,
-        price: 15000,
-        total_price: 15000,
-        category: "Groceries",
-        created_at: "2023-10-19T10:00:00.000Z",
-      },
-      {
-        id: "5c",
-        name: "Cheese",
-        qty: 1,
-        price: 36000,
-        total_price: 36000,
-        category: "Groceries",
-        created_at: "2023-10-19T10:00:00.000Z",
-      },
-    ],
-  },
-  {
-    id: "6",
-    store_name: "Coffee House",
-    total_amount: 38000,
-    transaction_date: "2023-10-18T14:45:00.000Z",
-    status: "pending",
-    receipt_items: [
-      {
-        id: "6a",
-        name: "Cappuccino",
-        qty: 1,
-        price: 28000,
-        total_price: 28000,
-        category: "Food & Dining",
-        created_at: "2023-10-18T14:45:00.000Z",
-      },
-      {
-        id: "6b",
-        name: "Cookie",
-        qty: 1,
-        price: 10000,
-        total_price: 10000,
-        category: "Food & Dining",
-        created_at: "2023-10-18T14:45:00.000Z",
-      },
-    ],
-  },
 ];
 
 export const ReceiptsPage = () => {
@@ -240,9 +158,9 @@ export const ReceiptsPage = () => {
     return stores.sort();
   }, [receipts]);
 
-  // Filter receipts
-  const filteredReceipts = useMemo(() => {
-    return receipts.filter((receipt) => {
+  // Shared filter function
+  const applyFilters = useCallback(
+    (receipt: Receipt) => {
       // Search filter
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -292,19 +210,32 @@ export const ReceiptsPage = () => {
       }
 
       return true;
-    });
-  }, [receipts, searchQuery, filterValues]);
-
-  // Separate action-required (pending) from recent activity
-  const actionRequiredReceipts = useMemo(
-    () => filteredReceipts.filter((r) => r.status === "pending"),
-    [filteredReceipts],
+    },
+    [searchQuery, filterValues],
   );
 
-  const recentReceipts = filteredReceipts;
+  // Filtered Action Required receipts
+  const actionRequiredResults = useMemo(() => {
+    return receipts.filter(
+      (r) => r.status === "action-required" && applyFilters(r),
+    );
+  }, [receipts, applyFilters]);
+
+  // Filtered Recent Activity receipts (excluding action-required)
+  const recentActivityResults = useMemo(() => {
+    return receipts.filter(
+      (r) => r.status !== "action-required" && applyFilters(r),
+    );
+  }, [receipts, applyFilters]);
 
   const hasAnyReceipts = receipts.length > 0;
-  const hasFilteredResults = filteredReceipts.length > 0;
+  const hasActionResults = actionRequiredResults.length > 0;
+  const hasRecentResults = recentActivityResults.length > 0;
+  const isSearching =
+    searchQuery !== "" ||
+    filterValues.date !== null ||
+    filterValues.store !== null ||
+    filterValues.status !== null;
 
   const handleFilterToggle = useCallback((filter: FilterType) => {
     setActiveFilter((prev) => (prev === filter ? null : filter));
@@ -327,13 +258,16 @@ export const ReceiptsPage = () => {
     setReceipts((prev) =>
       prev.map((r) => (r.id === updatedReceipt.id ? updatedReceipt : r)),
     );
-    // Here you would also call API to update backend
   }, []);
 
   const handleViewAllActionRequired = () => {
-    // Navigate to dedicated page
     navigate({ to: "/receipts/action-required" });
   };
+
+  const isReadOnly =
+    selectedReceipt?.status === "verified" ||
+    selectedReceipt?.status === "split" ||
+    selectedReceipt?.status === "pending";
 
   if (isLoading) {
     return <ReceiptsSkeleton />;
@@ -342,12 +276,10 @@ export const ReceiptsPage = () => {
   return (
     <div
       ref={contentRef}
-      className="pb-24 min-h-screen relative"
+      className="pb-24 min-h-screen relative bg-[#0b0e11]"
       onClick={() => {
-        // Close filter dropdowns when clicking outside
         if (activeFilter) setActiveFilter(null);
       }}
-      // Attach touch handlers for pull-to-refresh
       onTouchStart={handlers.onTouchStart}
       onTouchMove={handlers.onTouchMove}
       onTouchEnd={handlers.onTouchEnd}
@@ -364,7 +296,7 @@ export const ReceiptsPage = () => {
         {isRefreshing ? (
           <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
         ) : (
-          <div className="h-1.5 w-12 bg-gray-700 rounded-full opacity-50" /> // subtle indicator
+          <div className="h-1.5 w-12 bg-gray-700 rounded-full opacity-50" />
         )}
       </div>
 
@@ -388,19 +320,33 @@ export const ReceiptsPage = () => {
 
         {!hasAnyReceipts ? (
           <ReceiptEmptyState type="no-receipts" />
-        ) : !hasFilteredResults ? (
-          <ReceiptEmptyState type="no-results" />
         ) : (
           <>
-            <ActionRequiredSection
-              receipts={actionRequiredReceipts}
-              onViewAll={handleViewAllActionRequired}
-              onReviewReceipt={handleReviewReceipt}
-            />
-            <RecentActivityList
-              receipts={recentReceipts}
-              onReceiptClick={handleReviewReceipt}
-            />
+            {!isSearching && hasActionResults && (
+              <ActionRequiredSection
+                receipts={actionRequiredResults}
+                onViewAll={handleViewAllActionRequired}
+                onReviewReceipt={handleReviewReceipt}
+              />
+            )}
+
+            {!hasRecentResults && isSearching ? (
+              <ReceiptEmptyState type="no-results" />
+            ) : (
+              <RecentActivityList
+                receipts={recentActivityResults}
+                onReceiptClick={handleReviewReceipt}
+                onStatusClick={(receipt) => {
+                  if (
+                    receipt.status === "verified" ||
+                    receipt.status === "split" ||
+                    receipt.status === "pending"
+                  ) {
+                    handleReviewReceipt(receipt);
+                  }
+                }}
+              />
+            )}
           </>
         )}
       </div>
@@ -412,6 +358,7 @@ export const ReceiptsPage = () => {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           onSave={handleSaveReceipt}
+          isReadOnly={isReadOnly}
         />
       )}
     </div>

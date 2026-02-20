@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import type { Receipt } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,11 +9,15 @@ import {
   Monitor,
   ShoppingCart,
   Store,
+  CheckCircle2,
+  GitMerge,
+  Clock,
 } from "lucide-react";
 
 interface RecentActivityListProps {
   receipts: Receipt[];
   onReceiptClick?: (receipt: Receipt) => void;
+  onStatusClick?: (receipt: Receipt, status: string) => void;
 }
 
 const storeIcons: Record<string, { icon: typeof ShoppingBag; color: string }> =
@@ -29,7 +34,6 @@ const iconPool = [
 
 function getStoreIcon(storeName: string) {
   if (storeIcons[storeName]) return storeIcons[storeName];
-  // Deterministic icon based on store name hash
   const hash = storeName
     .split("")
     .reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -38,84 +42,168 @@ function getStoreIcon(storeName: string) {
   return entry;
 }
 
-const statusConfig: Record<string, { label: string; className: string }> = {
+const statusConfig: Record<
+  string,
+  { label: string; className: string; icon?: any }
+> = {
   verified: {
     label: "VERIFIED",
     className: "bg-green-500/20 text-green-400 border-green-500/30",
+    icon: CheckCircle2,
   },
   split: {
     label: "SPLIT",
-    className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    className: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+    icon: GitMerge,
   },
   pending: {
     label: "PENDING",
     className: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+    icon: Clock,
+  },
+  "action-required": {
+    label: "ACTION REQUIRED",
+    className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   },
 };
 
 export const RecentActivityList = ({
   receipts,
   onReceiptClick,
+  onStatusClick,
 }: RecentActivityListProps) => {
+  const [tooltip, setTooltip] = useState<{ id: string; text: string } | null>(
+    null,
+  );
+
+  const groupedReceipts = useMemo(() => {
+    const groups: Record<string, Receipt[]> = {};
+    const now = new Date();
+    const today = now.toDateString();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+
+    receipts.forEach((receipt) => {
+      const date = new Date(receipt.transaction_date);
+      const dateStr = date.toDateString();
+      let groupKey = "";
+
+      if (dateStr === today) {
+        groupKey = "TODAY";
+      } else if (dateStr === yesterdayStr) {
+        groupKey = "YESTERDAY";
+      } else {
+        groupKey = date
+          .toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })
+          .toUpperCase();
+      }
+
+      if (!groups[groupKey]) groups[groupKey] = [];
+      groups[groupKey].push(receipt);
+    });
+
+    return groups;
+  }, [receipts]);
+
+  const handleStatusClick = (e: React.MouseEvent, receipt: Receipt) => {
+    e.stopPropagation();
+    const status = receipt.status || "verified";
+
+    if (status === "pending") {
+      setTooltip({ id: receipt.id, text: "Processing..." });
+      setTimeout(() => setTooltip(null), 2000);
+    } else {
+      onStatusClick?.(receipt, status);
+    }
+  };
+
   if (receipts.length === 0) return null;
 
   return (
     <div className="px-4 pb-4">
-      <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
-      <div className="space-y-3">
-        {receipts.map((receipt) => {
-          const date = new Date(receipt.transaction_date);
-          const dateLabel = date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-          const timeLabel = date.toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          });
+      <h2 className="text-lg font-bold text-white mb-6">Recent Activity</h2>
+      <div className="space-y-8">
+        {Object.entries(groupedReceipts).map(([group, items]) => (
+          <div key={group} className="relative">
+            <div className="sticky top-0 z-10 bg-[#0b0e11]/80 backdrop-blur-md py-2 mb-2">
+              <h3 className="text-xs font-bold text-gray-500 tracking-wider">
+                {group}
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {items.map((receipt) => {
+                const date = new Date(receipt.transaction_date);
+                const timeLabel = date.toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                });
 
-          const status = receipt.status || "verified";
-          const statusInfo = statusConfig[status] || statusConfig.verified;
-          const { icon: StoreIcon, color } = getStoreIcon(receipt.store_name);
+                const status = receipt.status || "verified";
+                const statusInfo =
+                  statusConfig[status] || statusConfig.verified;
+                const { icon: StoreIcon, color } = getStoreIcon(
+                  receipt.store_name,
+                );
+                const StatusIcon = statusInfo.icon;
 
-          return (
-            <Card
-              key={receipt.id}
-              className="bg-[#1a2129] border-none rounded-xl text-white cursor-pointer hover:bg-[#1e2730] transition-colors"
-              onClick={() => onReceiptClick?.(receipt)}
-            >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`h-11 w-11 ${color} rounded-xl flex items-center justify-center shrink-0`}
+                return (
+                  <Card
+                    key={receipt.id}
+                    className="bg-[#1a2129] border-none rounded-2xl text-white cursor-pointer hover:bg-[#1e2730] transition-colors relative"
+                    onClick={() => onReceiptClick?.(receipt)}
                   >
-                    <StoreIcon className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{receipt.store_name}</p>
-                    <p className="text-sm text-gray-400">
-                      {dateLabel} • {timeLabel}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end shrink-0 ml-3">
-                  <p className="font-semibold">
-                    {formattedRupiah(receipt.total_amount)}
-                  </p>
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] px-2 py-0 mt-1 rounded-full ${statusInfo.className}`}
-                  >
-                    <span className="mr-1">●</span>
-                    {statusInfo.label}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`h-12 w-12 ${color} rounded-2xl flex items-center justify-center shrink-0 shadow-lg`}
+                        >
+                          <StoreIcon className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold truncate text-[15px]">
+                            {receipt.store_name}
+                          </p>
+                          <p className="text-xs text-gray-400 font-medium">
+                            {timeLabel}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 ml-3">
+                        <p className="font-black text-base">
+                          {formattedRupiah(receipt.total_amount)}
+                        </p>
+                        <div className="relative">
+                          <Badge
+                            variant="outline"
+                            className={`text-[9px] font-bold px-2 py-0.5 mt-1.5 rounded-full flex items-center gap-1 border ${statusInfo.className}`}
+                            onClick={(e) => handleStatusClick(e, receipt)}
+                          >
+                            {StatusIcon ? (
+                              <StatusIcon className="h-2.5 w-2.5" />
+                            ) : (
+                              <span className="text-[10px]">●</span>
+                            )}
+                            {statusInfo.label}
+                          </Badge>
+                          {tooltip?.id === receipt.id && (
+                            <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-gray-800 text-white text-[10px] rounded shadow-lg animate-in fade-in slide-in-from-bottom-1">
+                              {tooltip.text}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

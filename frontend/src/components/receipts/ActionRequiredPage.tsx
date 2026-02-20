@@ -1,19 +1,20 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RecentActivityList } from "./RecentActivityList";
 import type { Receipt } from "@/types";
 import { useMemo, useState, useCallback } from "react";
 import { ReceiptEditModal } from "./ReceiptEditModal";
+import { Card, CardContent } from "@/components/ui/card";
+import { formattedRupiah } from "@/utils/currency";
 
-// Mock data (same as ReceiptsPage)
+// Mock data (shared with ReceiptsPage)
 const mockReceipts: Receipt[] = [
   {
     id: "1",
     store_name: "Grocery Mart",
     total_amount: 45200,
     transaction_date: new Date().toISOString(),
-    status: "pending",
+    status: "action-required",
     confidence: 0.65,
     tax: 3500,
     receipt_items: [
@@ -47,35 +48,12 @@ const mockReceipts: Receipt[] = [
     ],
   },
   {
-    id: "2",
-    store_name: "Retail Center",
-    total_amount: 124500,
-    transaction_date: "2023-10-24T16:30:00.000Z",
-    status: "verified",
-    receipt_items: [],
-  },
-  {
-    id: "3",
-    store_name: "Coffee House",
-    total_amount: 64500,
-    transaction_date: "2023-10-23T08:15:00.000Z",
-    status: "split",
-    receipt_items: [],
-  },
-  {
-    id: "5",
-    store_name: "Grocery Mart",
-    total_amount: 87000,
-    transaction_date: "2023-10-19T10:00:00.000Z",
-    status: "pending",
-    receipt_items: [],
-  },
-  {
-    id: "6",
-    store_name: "Coffee House",
-    total_amount: 38000,
-    transaction_date: "2023-10-18T14:45:00.000Z",
-    status: "pending",
+    id: "11",
+    store_name: "Supermarket Plus",
+    total_amount: 89000,
+    transaction_date: new Date().toISOString(),
+    status: "action-required",
+    confidence: 0.45,
     receipt_items: [],
   },
 ];
@@ -86,8 +64,8 @@ export const ActionRequiredPage = () => {
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const pendingReceipts = useMemo(
-    () => receipts.filter((r) => r.status === "pending"),
+  const actionRequiredReceipts = useMemo(
+    () => receipts.filter((r) => r.status === "action-required"),
     [receipts],
   );
 
@@ -107,31 +85,36 @@ export const ActionRequiredPage = () => {
   }, []);
 
   return (
-    <div className="pb-24 min-h-screen bg-background">
+    <div className="pb-24 min-h-screen bg-[#0b0e11] text-white">
       {/* Header */}
-      <div className="py-6 px-4 flex items-center gap-4 sticky top-0 bg-background/95 backdrop-blur z-10 border-b border-border/50">
+      <div className="py-6 px-4 flex items-center gap-4 sticky top-0 bg-[#0b0e11]/80 backdrop-blur-md z-10 border-b border-gray-800/50">
         <Button
           variant="ghost"
           size="icon"
           onClick={handleBack}
-          className="hover:bg-accent hover:text-white"
+          className="text-white hover:bg-white/10 p-0 h-10 w-10 shrink-0"
         >
           <ArrowLeft className="h-6 w-6" />
         </Button>
-        <h1 className="text-xl font-bold bg-linear-to-r from-white to-gray-400 bg-clip-text text-transparent">
+        <h1 className="text-xl font-black bg-linear-to-r from-white to-gray-400 bg-clip-text text-transparent">
           Action Required
         </h1>
       </div>
 
       <div className="p-4">
-        <p className="text-gray-400 mb-4 text-sm">
-          {pendingReceipts.length} receipts require your review
+        <p className="text-gray-500 font-bold text-sm mb-6 px-1">
+          {actionRequiredReceipts.length} RECEIPTS REQUIRE YOUR REVIEW
         </p>
 
-        <RecentActivityList
-          receipts={pendingReceipts}
-          onReceiptClick={handleReviewReceipt}
-        />
+        <div className="space-y-4">
+          {actionRequiredReceipts.map((receipt) => (
+            <ActionRequiredListItem
+              key={receipt.id}
+              receipt={receipt}
+              onReview={() => handleReviewReceipt(receipt)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Edit Modal */}
@@ -144,5 +127,73 @@ export const ActionRequiredPage = () => {
         />
       )}
     </div>
+  );
+};
+
+interface ActionRequiredListItemProps {
+  receipt: Receipt;
+  onReview: () => void;
+}
+
+const ActionRequiredListItem = ({
+  receipt,
+  onReview,
+}: ActionRequiredListItemProps) => {
+  const date = new Date(receipt.transaction_date);
+  const dateLabel = "Today"; // Simple for mock
+  const timeLabel = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  return (
+    <Card className="bg-[#1a2129] border border-gray-800/50 rounded-[24px] text-white overflow-hidden shadow-xl">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-12 w-12 bg-[#252a31] rounded-xl flex items-center justify-center shrink-0">
+              <ShoppingBag className="h-6 w-6 text-gray-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-base truncate">
+                {receipt.store_name}
+              </p>
+              <p className="text-xs text-gray-400">
+                {dateLabel} • {timeLabel}
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={onReview}
+            variant="ghost"
+            className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 font-bold p-0 h-auto"
+          >
+            Verify Now
+          </Button>
+        </div>
+
+        <div className="flex items-baseline gap-1 mb-5">
+          <span className="text-2xl font-black text-white">
+            {formattedRupiah(receipt.total_amount)}
+          </span>
+          <span className="text-sm text-gray-500 font-medium">(Est)</span>
+        </div>
+
+        <div className="space-y-2">
+          <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-yellow-500 rounded-full"
+              style={{ width: `${(receipt.confidence || 0.65) * 100}%` }}
+            />
+          </div>
+          <div className="flex justify-end">
+            <span className="text-xs font-bold text-yellow-500">
+              Confirm Total
+            </span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

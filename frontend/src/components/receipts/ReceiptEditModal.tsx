@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { Receipt, ReceiptItem } from "@/types";
 import {
   X,
-  ZoomIn,
-  ZoomOut,
+  // ZoomIn,
+  // ZoomOut,
   Calendar,
   Clock,
   AlertTriangle,
@@ -11,12 +11,18 @@ import {
   Trash2,
   Maximize2,
   CheckCircle2,
-  Info,
-  ChevronUp,
+  // Info,
+  // ChevronUp,
+  MoreVertical,
+  ShoppingBag,
+  FileText,
+  ChevronRight,
+  GitMerge,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+// import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formattedRupiah } from "@/utils/currency"; // Assuming we have this or similar currency formatter
 
@@ -36,6 +42,7 @@ interface ReceiptEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedReceipt: Receipt) => void;
+  isReadOnly?: boolean;
 }
 
 export const ReceiptEditModal = ({
@@ -43,13 +50,14 @@ export const ReceiptEditModal = ({
   isOpen,
   onClose,
   onSave,
+  isReadOnly = false,
 }: ReceiptEditModalProps) => {
   const [editedReceipt, setEditedReceipt] = useState<Receipt>(receipt);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [showFullImage, setShowFullImage] = useState(false);
+  // const [showFullImage, setShowFullImage] = useState(false);
 
   // Initialize state when receipt changes
   useEffect(() => {
@@ -69,8 +77,42 @@ export const ReceiptEditModal = ({
   const totalMismatch = Math.abs(itemsTotal - editedReceipt.total_amount) > 100; // Allow small rounding diff
 
   const handleSave = () => {
-    onSave({ ...editedReceipt, status: "verified" });
+    onSave({ ...editedReceipt, status: "pending" });
     onClose();
+  };
+
+  const handleAddItem = () => {
+    const newItem: ReceiptItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: "",
+      qty: 1,
+      price: 0,
+      total_price: 0,
+      category: "Uncategorized",
+      created_at: new Date().toISOString(),
+    };
+    setEditedReceipt({
+      ...editedReceipt,
+      receipt_items: [...editedReceipt.receipt_items, newItem],
+    });
+  };
+
+  const handleDeleteItem = (id: string) => {
+    setEditedReceipt({
+      ...editedReceipt,
+      receipt_items: editedReceipt.receipt_items.filter(
+        (item) => item.id !== id,
+      ),
+    });
+  };
+
+  const updateItem = (idx: number, updates: Partial<ReceiptItem>) => {
+    const newItems = [...editedReceipt.receipt_items];
+    newItems[idx] = { ...newItems[idx], ...updates };
+    setEditedReceipt({
+      ...editedReceipt,
+      receipt_items: newItems,
+    });
   };
 
   return (
@@ -85,8 +127,21 @@ export const ReceiptEditModal = ({
         >
           <X className="h-6 w-6" />
         </Button>
-        <span className="text-lg font-semibold text-white">Verify Receipt</span>
-        <div className="w-10" /> {/* Spacer for centering */}
+        <span className="text-lg font-semibold text-white">
+          {isReadOnly ? "Receipt Details" : "Verify Receipt"}
+        </span>
+        <div className="flex gap-2">
+          {isReadOnly && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-gray-400 hover:text-white"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          )}
+          {!isReadOnly && <div className="w-10" />}
+        </div>
       </div>
 
       {/* Main Content - Split or Scrollable */}
@@ -166,118 +221,163 @@ export const ReceiptEditModal = ({
             </div>
 
             <div className="space-y-4">
-              {/* Store Name */}
-              <div>
-                <label className="text-gray-400 text-sm mb-1.5 block">
-                  Store Name
-                </label>
-                <div className="relative">
-                  <DarkInput
-                    value={editedReceipt.store_name}
-                    onChange={(e) =>
-                      setEditedReceipt({
-                        ...editedReceipt,
-                        store_name: e.target.value,
-                      })
-                    }
-                    className="pr-10 border-yellow-600/50" // Highlighting low confidence
-                  />
-                  <AlertTriangle className="absolute right-3 top-2.5 h-5 w-5 text-yellow-500" />
+              {/* Store Name & Status Badge */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
+                      receipt.status === "verified"
+                        ? "bg-red-500/10"
+                        : "bg-blue-600/20"
+                    }`}
+                  >
+                    {receipt.status === "verified" ? (
+                      <ShoppingBag className="h-6 w-6 text-red-500" />
+                    ) : (
+                      <ReceiptIcon className="h-6 w-6 text-blue-500" />
+                    )}
+                  </div>
+                  <div>
+                    {isReadOnly ? (
+                      <h2 className="text-xl font-bold text-white leading-tight">
+                        {receipt.store_name}
+                      </h2>
+                    ) : (
+                      <>
+                        <label className="text-gray-400 text-sm mb-1.5 block">
+                          Store Name
+                        </label>
+                        <DarkInput
+                          value={editedReceipt.store_name}
+                          onChange={(e) =>
+                            setEditedReceipt({
+                              ...editedReceipt,
+                              store_name: e.target.value,
+                            })
+                          }
+                          className="pr-10 border-yellow-600/50"
+                        />
+                      </>
+                    )}
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {new Date(receipt.transaction_date).toLocaleDateString(
+                        "en-US",
+                        { month: "short", day: "numeric", year: "numeric" },
+                      )}{" "}
+                      •{" "}
+                      {new Date(receipt.transaction_date).toLocaleTimeString(
+                        [],
+                        { hour: "2-digit", minute: "2-digit" },
+                      )}
+                    </div>
+                  </div>
                 </div>
+
+                {isReadOnly && (
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30 rounded-full py-0.5 px-2 text-[10px] flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> VERIFIED
+                  </Badge>
+                )}
+              </div>
+
+              {!isReadOnly && (
                 <div className="flex items-center gap-1.5 mt-1.5">
                   <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
                   <span className="text-xs text-yellow-500">
                     Low confidence score (65%)
                   </span>
                 </div>
-              </div>
+              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* Date */}
-                <div>
-                  <label className="text-gray-400 text-sm mb-1.5 block">
-                    Date
-                  </label>
-                  <div className="relative">
-                    <DarkInput
-                      value={new Date(
-                        editedReceipt.transaction_date,
-                      ).toLocaleDateString()}
-                      onChange={() => {}} // Read-only for mock
-                      className="pr-10"
-                    />
-                    <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-
-                {/* Time */}
-                <div>
-                  <label className="text-gray-400 text-sm mb-1.5 block">
-                    Time
-                  </label>
-                  <div className="relative">
-                    <DarkInput
-                      value={new Date(
-                        editedReceipt.transaction_date,
-                      ).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      onChange={() => {}}
-                      className="pr-10"
-                    />
-                    <Clock className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Total Amount */}
-                <div>
-                  <label className="text-gray-400 text-sm mb-1.5 block">
-                    Total Amount
-                  </label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-2.5 text-gray-400 font-semibold">
-                      $
+              {!isReadOnly && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Date */}
+                    <div>
+                      <label className="text-gray-400 text-sm mb-1.5 block">
+                        Date
+                      </label>
+                      <div className="relative">
+                        <DarkInput
+                          value={new Date(
+                            editedReceipt.transaction_date,
+                          ).toLocaleDateString()}
+                          onChange={() => {}}
+                          className="pr-10"
+                        />
+                        <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                      </div>
                     </div>
-                    {/* Using $ for styling per design, though app uses Rp */}
-                    <DarkInput
-                      value={editedReceipt.total_amount}
-                      onChange={(e) =>
-                        setEditedReceipt({
-                          ...editedReceipt,
-                          total_amount: Number(e.target.value),
-                        })
-                      }
-                      className="pl-7 text-lg font-semibold bg-blue-900/10 border-blue-500/30 text-blue-100"
-                    />
-                    <Maximize2 className="absolute right-3 top-3 h-4 w-4 text-blue-500" />
-                  </div>
-                </div>
 
-                {/* Tax */}
-                <div>
-                  <label className="text-gray-400 text-sm mb-1.5 block">
-                    Tax
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-gray-400">
-                      $
-                    </span>
-                    <DarkInput
-                      value={editedReceipt.tax || 0}
-                      onChange={(e) =>
-                        setEditedReceipt({
-                          ...editedReceipt,
-                          tax: Number(e.target.value),
-                        })
-                      }
-                      className="pl-6"
-                    />
+                    {/* Time */}
+                    <div>
+                      <label className="text-gray-400 text-sm mb-1.5 block">
+                        Time
+                      </label>
+                      <div className="relative">
+                        <DarkInput
+                          value={new Date(
+                            editedReceipt.transaction_date,
+                          ).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          onChange={() => {}}
+                          className="pr-10"
+                        />
+                        <Clock className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Total Amount */}
+                    <div>
+                      <label className="text-gray-400 text-sm mb-1.5 block">
+                        Total Amount
+                      </label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-2.5 text-gray-400 font-semibold">
+                          $
+                        </div>
+                        <DarkInput
+                          value={editedReceipt.total_amount}
+                          onChange={(e) =>
+                            setEditedReceipt({
+                              ...editedReceipt,
+                              total_amount: Number(e.target.value),
+                            })
+                          }
+                          className="pl-7 text-lg font-semibold bg-blue-900/10 border-blue-500/30 text-blue-100"
+                        />
+                        <Maximize2 className="absolute right-3 top-3 h-4 w-4 text-blue-500" />
+                      </div>
+                    </div>
+
+                    {/* Tax */}
+                    <div>
+                      <label className="text-gray-400 text-sm mb-1.5 block">
+                        Tax
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-gray-400">
+                          $
+                        </span>
+                        <DarkInput
+                          value={editedReceipt.tax || 0}
+                          onChange={(e) =>
+                            setEditedReceipt({
+                              ...editedReceipt,
+                              tax: Number(e.target.value),
+                            })
+                          }
+                          className="pl-6"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -285,78 +385,109 @@ export const ReceiptEditModal = ({
 
           {/* Section: Items */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 border-t border-dashed border-gray-800 pt-6">
               <div className="flex items-center gap-2">
-                <div className="bg-blue-600/20 p-1.5 rounded-lg">
-                  <ListChecks className="h-5 w-5 text-blue-500" />
-                </div>
-                <h3 className="text-lg font-bold text-white">Items</h3>
+                {!isReadOnly && (
+                  <div className="bg-blue-600/20 p-1.5 rounded-lg">
+                    <ListChecks className="h-5 w-5 text-blue-500" />
+                  </div>
+                )}
+                <h3
+                  className={`${isReadOnly ? "text-gray-400 text-sm font-medium" : "text-lg font-bold text-white"}`}
+                >
+                  Items
+                </h3>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-blue-400 hover:text-blue-300 gap-1 pr-0"
-              >
-                <Plus className="h-4 w-4" /> Add Item
-              </Button>
+              {!isReadOnly && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-blue-400 hover:text-blue-300 gap-1 pr-0"
+                  onClick={handleAddItem}
+                >
+                  <Plus className="h-4 w-4" /> Add Item
+                </Button>
+              )}
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {editedReceipt.receipt_items.map((item, idx) => (
-                <div key={item.id} className="group">
-                  <div className="flex items-end gap-3 mb-2">
-                    <div className="flex-1">
-                      <label className="text-xs text-gray-500 mb-1 block">
-                        Item Name
-                      </label>
-                      <DarkInput
-                        value={item.name}
-                        onChange={(e) => {
-                          const newItems = [...editedReceipt.receipt_items];
-                          newItems[idx].name = e.target.value;
-                          setEditedReceipt({
-                            ...editedReceipt,
-                            receipt_items: newItems,
-                          });
-                        }}
-                        className="rounded-b-none border-b-0 focus:border-b"
-                      />
-                    </div>
-                    <div className="w-24">
-                      <label className="text-xs text-gray-500 mb-1 block text-right">
-                        Price
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-2 top-2 text-gray-500 text-sm">
-                          $
+                <div
+                  key={item.id}
+                  className={`group relative ${isReadOnly ? "flex items-center justify-between" : ""}`}
+                >
+                  {isReadOnly ? (
+                    <>
+                      <div className="flex flex-col">
+                        <span className="text-white font-medium">
+                          {item.name}
                         </span>
-                        <DarkInput
-                          value={item.total_price}
-                          onChange={(e) => {
-                            const newItems = [...editedReceipt.receipt_items];
-                            newItems[idx].total_price = Number(e.target.value);
-                            setEditedReceipt({
-                              ...editedReceipt,
-                              receipt_items: newItems,
-                            });
-                          }}
-                          className="text-right pl-5 rounded-b-none border-b-0"
-                        />
+                        {item.category && (
+                          <span className="text-xs text-gray-500 italic">
+                            {item.category}
+                          </span>
+                        )}
                       </div>
-                    </div>
-                  </div>
-                  <div className="w-full h-px bg-gray-800" />
-                  {/* Low confidence indicator for specific item */}
-                  {idx === 2 && (
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                      <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                    </div>
+                      <span className="text-white font-semibold">
+                        {formattedRupiah(item.total_price)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-end gap-3 mb-2">
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-500 mb-1 block">
+                            Item Name
+                          </label>
+                          <DarkInput
+                            value={item.name}
+                            onChange={(e) =>
+                              updateItem(idx, { name: e.target.value })
+                            }
+                            className="rounded-b-none border-b-0 focus:border-b"
+                          />
+                        </div>
+                        <div className="w-24">
+                          <label className="text-xs text-gray-500 mb-1 block text-right">
+                            Price
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-2 top-2 text-gray-500 text-sm">
+                              $
+                            </span>
+                            <DarkInput
+                              value={item.total_price}
+                              onChange={(e) =>
+                                updateItem(idx, {
+                                  total_price: Number(e.target.value),
+                                })
+                              }
+                              className="text-right pl-5 rounded-b-none border-b-0"
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="text-gray-500 hover:text-red-500 mb-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="w-full h-px bg-gray-800" />
+                      {idx === 2 && ( // Example low confidence indicator
+                        <div className="flex items-center justify-end gap-1 mt-1">
+                          <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
             </div>
 
-            {totalMismatch && (
+            {!isReadOnly && totalMismatch && (
               <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between">
                 <span className="text-gray-400 text-sm">Sum of items</span>
                 <div className="flex items-center gap-2">
@@ -368,32 +499,70 @@ export const ReceiptEditModal = ({
               </div>
             )}
 
-            {totalMismatch && (
+            {!isReadOnly && totalMismatch && (
               <p className="text-xs text-red-400 mt-2 text-right">
                 Sum of items does not match Receipt Total ($
                 {editedReceipt.total_amount.toLocaleString()})
               </p>
             )}
           </div>
+
+          {isReadOnly && (
+            <div className="mt-8 space-y-4">
+              <Button
+                variant="outline"
+                className="w-full bg-[#1a2129] border-gray-800 text-white rounded-xl h-14 justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 bg-gray-800 rounded-lg flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium text-sm">Original Receipt</p>
+                    <p className="text-xs text-gray-500">
+                      Tap to view full image
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-600" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Footer Actions */}
-      <div className="p-4 bg-[#0f1419] border-t border-gray-800 shrink-0 mb-4">
-        {" "}
-        {/* mb-4 for bottom spacing on mobile */}
-        <Button
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-12 text-lg font-semibold mb-4"
-          onClick={handleSave}
-        >
-          <CheckCircle2 className="mr-2 h-5 w-5" />
-          Confirm & Save
-        </Button>
-        <div className="text-center">
-          <button className="text-gray-500 text-sm flex items-center justify-center gap-2 mx-auto hover:text-gray-300">
-            <AlertTriangle className="h-3 w-3" /> Report OCR Error
-          </button>
-        </div>
+      <div className="p-4 bg-[#0f1419] border-t border-gray-800 shrink-0 mb-4 space-y-3">
+        {isReadOnly ? (
+          <>
+            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-14 text-lg font-bold">
+              <GitMerge className="mr-2 h-5 w-5 rotate-90" />
+              Split this Bill
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full bg-transparent border-gray-800 text-white rounded-xl h-14 text-lg font-bold"
+            >
+              <Share2 className="mr-2 h-5 w-5" />
+              Export to PDF
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-12 text-lg font-semibold"
+              onClick={handleSave}
+            >
+              <CheckCircle2 className="mr-2 h-5 w-5" />
+              Confirm & Save
+            </Button>
+            <div className="text-center pt-2">
+              <button className="text-gray-500 text-sm flex items-center justify-center gap-2 mx-auto hover:text-gray-300 transition-colors">
+                <AlertTriangle className="h-3 w-3" /> Report OCR Error
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

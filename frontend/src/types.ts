@@ -15,7 +15,7 @@ export interface Receipt {
   total_amount: number;
   tax?: number;
   transaction_date: string;
-  status: "pending" | "verified" | "split";
+  status: "pending" | "action-required" | "verified" | "split";
   receipt_items: ReceiptItem[];
   confidence?: number;
   image_url?: string;
