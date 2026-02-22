@@ -125,6 +125,14 @@ const mockReceipts: Receipt[] = [
 ];
 
 export const ReceiptsPage = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Receipts />
+    </QueryClientProvider>
+  );
+};
+
+const Receipts = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -134,7 +142,6 @@ export const ReceiptsPage = () => {
     store: string | null;
     status: string | null;
   }>({ date: null, store: null, status: null });
-
 
   // Data state with localStorage persistence
   const [receipts, setReceipts] = useState<Receipt[]>(() => {
@@ -301,27 +308,27 @@ export const ReceiptsPage = () => {
     return <ReceiptsSkeleton />;
   }
 
-  const {data, error} = useQuery({
+  const { data, error } = useQuery({
     queryKey: ["userReceipts"],
-    queryFn: async() => {
+    queryFn: async () => {
       const res = await fetch(`${BACKEND_URL}/api/receipts`, {
         method: "GET",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
       });
-      if(!res) throw new Error("Failed to fetch receipts");
+      if (!res) throw new Error("Failed to fetch receipts");
 
-      return res.json()
+      return res.json();
     },
     staleTime: 30 * 1000,
-    refetchOnWindowFocus: true
-  })
+    refetchOnWindowFocus: true,
+  });
 
   useEffect(() => {
-    console.log(data)
-    console.log(error)
-  }, [])
+    console.log(data);
+    console.log(error);
+  }, []);
 
   return (
     <div
