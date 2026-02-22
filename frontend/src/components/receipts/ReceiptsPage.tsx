@@ -304,11 +304,8 @@ const Receipts = () => {
     selectedReceipt?.status === "verified" ||
     selectedReceipt?.status === "pending";
 
-  if (isLoading) {
-    return <ReceiptsSkeleton />;
-  }
-
-  const { data, error } = useQuery({
+    
+    const { data, error } = useQuery({
     queryKey: ["userReceipts"],
     queryFn: async () => {
       const res = await fetch(`${BACKEND_URL}/api/receipts`, {
@@ -324,11 +321,16 @@ const Receipts = () => {
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
   });
-
+  
   useEffect(() => {
-    console.log(data);
-    console.log(error);
-  }, []);
+    if(data) {
+      console.log(data)
+    }
+  }, [data]);
+  
+  if (isLoading) {
+    return <ReceiptsSkeleton />;
+  }
 
   return (
     <div
