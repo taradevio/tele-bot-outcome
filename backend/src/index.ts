@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { jwt } from "hono/jwt";
+import { jwt, sign } from "hono/jwt";
 import supabaseClient from "./middleware/auth";
 import { verifyTelegramHash } from "./utils/verifyTelegram";
 type Env = {
@@ -66,12 +66,14 @@ app.post("/process-receipt", async (c) => {
     const dateStr = payloadData.receipt.date;
     const timeStr = payloadData.receipt.time;
 
-    const safeTime = timeStr ? timeStr : '00:00:00';
+    const safeTime = timeStr ? timeStr : "00:00:00";
 
     const transactionDate = new Date(`${dateStr}T${safeTime}`).toISOString();
 
-    const statusValid = ["PENDING", "VERIFIED", "ACTION_REQUIRED", "FAILED"]
-    const status = statusValid.includes(payloadData.receipt.status) ? payloadData.receipt.status : "PENDING";
+    const statusValid = ["PENDING", "VERIFIED", "ACTION_REQUIRED", "FAILED"];
+    const status = statusValid.includes(payloadData.receipt.status)
+      ? payloadData.receipt.status
+      : "PENDING";
 
     const { data: receiptData, error: receiptError } = await db
       .from("receipts")
@@ -81,7 +83,7 @@ app.post("/process-receipt", async (c) => {
         total_amount: payloadData.receipt.total_amount,
         transaction_date: transactionDate,
         status: status,
-        low_confidence_fields: payloadData.receipt.low_confidence_fields
+        low_confidence_fields: payloadData.receipt.low_confidence_fields,
       })
       .select("id")
       .single();
@@ -178,6 +180,7 @@ app.post(
   // },
   async (c) => {
     const db = supabaseClient(c.env);
+
     // const payload = c.get("jwtPayload");
 
     const { userData } = await c.req.json();
@@ -198,6 +201,15 @@ app.post(
 
     if (userError) return c.json({ error: userError.message }, 500);
 
+    const token = await sign(
+      {
+        telegram_id,
+        user_id: userProfile.id,
+        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
+      },
+      c.env.JWT_SECRET,
+      "HS256",
+    );
     // const userId = c.req.query("user_id")
     // const userId = telegramUser.user_id;
 
@@ -213,7 +225,30 @@ app.post(
 
     console.log(userProfile, userReceipts);
 
-    return c.json({ userProfile, userReceipts });
+    return c.json({ userProfile, userReceipts, token });
+  },
+);
+
+app.get(
+  "/api/receipts",
+  (c, next) => jwt({ secret: c.env.JWT_SECRET, alg: "HS256" })(c, next),
+  async (c) => {
+    const db = supabaseClient(c.env);
+    const user_id = c.get("jwtPayload");
+
+    // const { receiptData } = c.req.json();
+
+    const { data, error } = await db
+      .from("receipts")
+      .select(
+        "id, store_name, total_amount, transaction_date, receipt_items (id, name, qty, price, total_price, category, created_at)",
+      )
+      .eq("user_id", user_id)
+      .order("transaction_date", { ascending: false });
+
+    if (error) return c.json({ error: error.message }, 500);
+
+    return c.json({ receipts: data });
   },
 );
 
