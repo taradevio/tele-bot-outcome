@@ -6,6 +6,7 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import { formattedRupiah } from "@/utils/currency";
+import { setToken } from "@/lib/auth";
 // import { transformCategoryData } from "@/utils/categoryHelpers";
 
 // import { useQuery } from "@tanstack/react-query";
@@ -274,8 +275,9 @@ const UserDashboard = () => {
     if (data) {
       setTelegramUserProfile(data.userProfile);
       setUserReceipts(data.userReceipts);
+      setToken(data.token)
       // setTelegramUser(data.userReceipts);
-      // console.log("data dari be", userReceipts)
+      // console.log("token", data.token)
       // console.log("telegramUser:", telegramUserProfile);
     }
   }, [data]);
