@@ -11,6 +11,14 @@ import { ReceiptEditModal } from "./ReceiptEditModal";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 // Mock receipt data for development
 const mockReceipts: Receipt[] = [
@@ -126,6 +134,7 @@ export const ReceiptsPage = () => {
     store: string | null;
     status: string | null;
   }>({ date: null, store: null, status: null });
+
 
   // Data state with localStorage persistence
   const [receipts, setReceipts] = useState<Receipt[]>(() => {
@@ -291,6 +300,28 @@ export const ReceiptsPage = () => {
   if (isLoading) {
     return <ReceiptsSkeleton />;
   }
+
+  const {data, error} = useQuery({
+    queryKey: ["userReceipts"],
+    queryFn: async() => {
+      const res = await fetch(`${BACKEND_URL}/api/receipts`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        },
+      });
+      if(!res) throw new Error("Failed to fetch receipts");
+
+      return res.json()
+    },
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true
+  })
+
+  useEffect(() => {
+    console.log(data)
+    console.log(error)
+  }, [])
 
   return (
     <div
