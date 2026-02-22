@@ -33,7 +33,7 @@ export const ActionRequiredSection = ({
       </div>
 
       {/* Stacked Cards Layout */}
-      <div className="relative h-[180px] w-full mt-2">
+      <div className="relative h-45 w-full mt-2">
         {receipts.slice(0, 3).map((receipt, index) => {
           // Bottom card has index 2 (if 3 items), Top card has index 0
           // const reversedIndex = receipts.slice(0, 3).length - 1 - index;
