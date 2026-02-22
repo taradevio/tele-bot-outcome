@@ -16,6 +16,7 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
+import { getToken } from "@/lib/auth";
 
 const queryClient = new QueryClient();
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -308,10 +309,14 @@ const Receipts = () => {
     const { data, error } = useQuery({
     queryKey: ["userReceipts"],
     queryFn: async () => {
+      const token = getToken();
+      if(!token) throw new Error("Not Authenticated")
+
       const res = await fetch(`${BACKEND_URL}/api/receipts`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
       });
       if (!res) throw new Error("Failed to fetch receipts");
@@ -331,6 +336,8 @@ const Receipts = () => {
   if (isLoading) {
     return <ReceiptsSkeleton />;
   }
+
+  if(error) throw new Error("Data tidak keangkut cuy...")
 
   return (
     <div
