@@ -70,6 +70,9 @@ app.post("/process-receipt", async (c) => {
 
     const transactionDate = new Date(`${dateStr}T${safeTime}`).toISOString();
 
+    const statusValid = ["PENDING", "VERIFIED", "ACTION_REQUIRED", "FAILED"]
+    const status = statusValid.includes(payloadData.receipt.status) ? payloadData.receipt.status : "PENDING";
+
     const { data: receiptData, error: receiptError } = await db
       .from("receipts")
       .insert({
@@ -77,6 +80,8 @@ app.post("/process-receipt", async (c) => {
         store_name: payloadData.receipt.merchant_name,
         total_amount: payloadData.receipt.total_amount,
         transaction_date: transactionDate,
+        status: status,
+        low_confidence_fields: payloadData.receipt.low_confidence_fields
       })
       .select("id")
       .single();
