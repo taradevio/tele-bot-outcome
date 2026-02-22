@@ -32,6 +32,8 @@ class ReceiptData(BaseModel):
     time: str
     total_amount: float
     category: str
+    status: str
+    low_confidence_status: list = []
 
 class TelegramUser(BaseModel):
     telegram_id: int
@@ -47,9 +49,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # await context.bot.send_message(chat_id=update.effectieve_chat.id, text="Please send a clear photo of your receipt for processing.")
 
 async def handle_receipt_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-   
-
-
     await update.message.reply_text('Processing your receipt image...')
     photo_file = await update.message.photo[-1].get_file()
     file_path = f"temp_receipt_{photo_file.file_id}.jpg"
@@ -80,14 +79,47 @@ async def background_refine(update, raw_text, file_path):
         if os.path.exists(file_path):
             os.remove(file_path)
         return
+    
+    if refined_data.get("status") == "FAILED":
+        await update.message.reply_text(refined_data.get("message", 'Failed to process receipt'))
+        return
+    
+    receipt_data = refined_data.get("receipt_data", {})
+    status = refined_data.get("status")
+    low_confidence_fields = refined_data.get("low_confidence_fields", [])
+
+    store_name = receipt_data.get("merchant_name", {}).get("value", "N/A")
+    total_amount = receipt_data.get("total_amount", {}).get("value", 0)
+    date = receipt_data.get("date", {}).get("value", "N/A")
+    time = receipt_data.get("time", {}).get("value", "N/A")
+    items = [
+        {
+            "name": item.get("name", {}).get("value", "N/A"),
+            "qty": item.get("qty", {}).get("value", 0),
+            "price": item.get("price", {}).get("value", 0),
+            "total_price": item.get("total_price", {}).get("value", 0),
+            "category": item.get("category", {}).get("value", "Others")
+        }
+        for item in receipt_data.get("items", [])
+    ]
 
     user = update.effective_user
     telegram_id = user.id
     first_name = user.first_name or "NoFirstName"
     user_name = user.username or "NoUsername"
 
+
     payload = {
-        "receipt": refined_data,
+        "receipt": {
+            "receipt_id": receipt_data.get("receipt_id"),
+            "merchant_name": store_name,
+            "total_amount": total_amount,
+            "date": date,
+            "time": time,
+            "items": items,
+            "status": status,
+            "low_confidence_fields": low_confidence_fields
+        },
         "user": {
             "telegram_id": telegram_id,
             "first_name": first_name,
@@ -99,7 +131,7 @@ async def background_refine(update, raw_text, file_path):
 
     async with httpx.AsyncClient() as client:
         try:
-            logger.info(f"Sending {payload} to backend for receipt ID: {refined_data.get('receipt_id', 'N/A')}")
+            logger.info(f"Sending {payload} to backend for receipt ID: {receipt_data.get('receipt_id', 'N/A')}")
             response = await client.post(
                 f"{BACKEND_URL}/process-receipt",
                 json=payload,
@@ -116,23 +148,12 @@ async def background_refine(update, raw_text, file_path):
         except Exception as e:
             logger.error(f"Error sending receipt data to backend: {e}")
 
-    if refined_data:
-        store_name = refined_data.get("merchant_name", "N/A")
-        items = refined_data.get("items", [])
-        date = refined_data.get("date", "N/A")
-        price = refined_data.get("price", 0)
-        time = refined_data.get("time", "N/A")
-        total_amount = refined_data.get("total_amount", 0)
-        category = refined_data.get("category", "N/A")
-        receipt_id = refined_data.get("receipt_id", "N/A")
-
     item_list = ""
     for item in items:
         name = item.get("name", "N/A")
         qty = item.get("qty", 0)
         price = item.get("price", 0)
         total = item.get("total_price", 0)
-        category = item.get("category", "N/A")
         item_list += f"• {name} x{qty} @{price:,} - Rp {total:,}\n"
         
     # try:
@@ -150,7 +171,7 @@ async def background_refine(update, raw_text, file_path):
             f"💰 *TOTAL AMOUNT:* *Rp {total_amount:,}*\n"
         )
 
-    if not refined_data:
+    if not receipt_data:
         await update.message.reply_text("Make sure the image is clear")
         
     await update.message.reply_text(caption, parse_mode='Markdown')
