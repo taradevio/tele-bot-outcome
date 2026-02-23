@@ -261,12 +261,12 @@ app.post(
 app.get("/api/receipts", async (c) => {
   const db = supabaseClient(c.env);
   // const token = getCookie(c, "access_token");
-  const header = c.req.header("Authorization")
-  
-   if (!header?.startsWith("Bearer ")) {
+  const header = c.req.header("Authorization");
+
+  if (!header?.startsWith("Bearer ")) {
     return c.json({ error: "Unauthorized" }, 401);
   }
-  
+
   const token = header?.split(" ")[1];
   try {
     const payload = await verify(token, c.env.JWT_SECRET, "HS256");
