@@ -202,7 +202,7 @@ const Receipts = () => {
     queryKey: ["userReceipts"],
     queryFn: async () => {
 
-      const token = getToken();
+      const token = await getToken();
       if(!token) throw new Error("Unauthenticated")
 
       const res = await fetch(`${BACKEND_URL}/api/receipts`, {
