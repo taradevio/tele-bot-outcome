@@ -33,7 +33,7 @@ class ReceiptData(BaseModel):
     total_amount: float
     category: str
     status: str
-    low_confidence_status: list = []
+    low_confidence_fields: list = []
 
 class TelegramUser(BaseModel):
     telegram_id: int
