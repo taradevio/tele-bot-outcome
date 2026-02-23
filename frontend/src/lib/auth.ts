@@ -3,9 +3,17 @@ import { encrypt, decrypt } from "./crypto";
 let _accessToken: string | null = null;
 
 export const setToken = async (token: string) => {
+  console.log("setToken called with:", token ? "token exists" : "token null");
   _accessToken = token;
-  const encrypted = await encrypt(token)
-  sessionStorage.setItem("access_token", encrypted);
+  
+  try {
+    const encrypted = await encrypt(token);
+    console.log("encrypted:", encrypted ? "success" : "failed");
+    sessionStorage.setItem("access_token", encrypted);
+    console.log("sessionStorage set:", sessionStorage.getItem("access_token") ? "success" : "failed");
+  } catch (error) {
+    console.error("setToken error:", error);
+  }
 };
 export const getToken = async (): Promise<string | null> => {
   if (_accessToken) return _accessToken;
