@@ -274,7 +274,7 @@ app.get("/api/receipts", async (c) => {
     const { data, error } = await db
       .from("receipts")
       .select(
-        "id, store_name, total_amount, transaction_date, receipt_items (id, name, qty, price, total_price, category, created_at)",
+        "id, store_name, total_amount, transaction_date, status, low_confidence_fields, receipt_items (id, name, qty, price, total_price, category, created_at)",
       )
       .eq("user_id", user_id)
       .order("created_at", { ascending: false });
