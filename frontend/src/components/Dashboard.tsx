@@ -275,9 +275,13 @@ const UserDashboard = () => {
     if (data) {
       setTelegramUserProfile(data.userProfile);
       setUserReceiptsItem(data.userReceipts);
-      setToken(data.accessToken)
+
+      (async () => {
+        await setToken(data.accessToken);
+        console.log("Token set:", sessionStorage.getItem("access_token"));
+      })();
       // setTelegramUser(data.userReceipts);
-      console.log("data", userReceipts)
+      console.log("data", userReceipts);
       // console.log("telegramUser:", telegramUserProfile);
     }
   }, [data]);
@@ -334,8 +338,10 @@ const UserDashboard = () => {
     );
 
     return Object.values(storeMap);
-  }, [userReceipts]);
-  const flatItems = userReceiptsItem?.flatMap((receipt) => receipt.receipt_items);
+  }, [userReceiptsItem]);
+  const flatItems = userReceiptsItem?.flatMap(
+    (receipt) => receipt.receipt_items,
+  );
   console.log("userReceipts", userReceipts);
 
   // const mapItems = flatItems.map((item) => item.total)
