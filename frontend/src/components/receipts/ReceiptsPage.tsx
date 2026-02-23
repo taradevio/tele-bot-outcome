@@ -210,8 +210,8 @@ const Receipts = () => {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
         },
+        credentials: "include"
       });
       if (!res) throw new Error("Failed to fetch receipts");
       
@@ -220,6 +220,12 @@ const Receipts = () => {
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    if(data) {
+      console.log(data)
+    }
+  }, [data]);
 
   const receipts: UserReceipts[] = data?.receipts ?? []
 
@@ -353,14 +359,6 @@ const Receipts = () => {
     selectedReceipt?.status === "verified" ||
     selectedReceipt?.status === "pending";
 
-    
-    
-  
-  useEffect(() => {
-    if(data) {
-      console.log(data)
-    }
-  }, [data]);
 
   
   
