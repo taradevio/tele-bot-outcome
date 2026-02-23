@@ -21,109 +21,138 @@ import { getToken } from "@/lib/auth";
 const queryClient = new QueryClient();
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
+interface LowConfidenceFields {
+  field: string;
+  confidence: number;
+  value: string | number | null;
+
+}
+interface ReceiptItem {
+  id: string;
+  name: string;
+  qty: number;
+  price: number;
+  total_price: number;
+  category: string;
+  created_at: string;
+}
+interface UserReceipts {
+  id: string;
+  store_name: string;
+  total_amount: number;
+  transaction_date: string;
+  status: "pending" | "action-required" | "verified";
+  low_confidence_fields: LowConfidenceFields[]
+  receipt_items: ReceiptItem[];
+}
+interface UserData {
+  receipts: UserReceipts[]
+}
+
+
 // Mock receipt data for development
-const mockReceipts: Receipt[] = [
-  {
-    id: "1",
-    store_name: "Grocery Mart",
-    total_amount: 45200,
-    transaction_date: new Date().toISOString(),
-    status: "action-required",
-    confidence: 0.65,
-    tax: 3500,
-    receipt_items: [
-      {
-        id: "1a",
-        name: "Rice 5kg",
-        qty: 1,
-        price: 15000,
-        total_price: 15000,
-        category: "Groceries",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "1b",
-        name: "Cooking Oil",
-        qty: 2,
-        price: 8000,
-        total_price: 16000,
-        category: "Groceries",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "1c",
-        name: "Eggs",
-        qty: 1,
-        price: 14200,
-        total_price: 14200,
-        category: "Groceries",
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: "10",
-    store_name: "Unidentified Store",
-    total_amount: 15000,
-    transaction_date: new Date().toISOString(),
-    status: "pending",
-    receipt_items: [],
-  },
-  {
-    id: "2",
-    store_name: "Retail Center",
-    total_amount: 124500,
-    transaction_date: "2023-10-24T16:30:00.000Z",
-    status: "verified",
-    receipt_items: [
-      {
-        id: "2a",
-        name: "T-Shirt",
-        qty: 2,
-        price: 45000,
-        total_price: 90000,
-        category: "Clothing",
-        created_at: "2023-10-24T16:30:00.000Z",
-      },
-      {
-        id: "2b",
-        name: "Socks Pack",
-        qty: 1,
-        price: 34500,
-        total_price: 34500,
-        category: "Clothing",
-        created_at: "2023-10-24T16:30:00.000Z",
-      },
-    ],
-  },
-  {
-    id: "3",
-    store_name: "Coffee House",
-    total_amount: 64500,
-    transaction_date: "2023-10-23T08:15:00.000Z",
-    status: "verified",
-    receipt_items: [
-      {
-        id: "3a",
-        name: "Latte",
-        qty: 2,
-        price: 25000,
-        total_price: 50000,
-        category: "Food & Dining",
-        created_at: "2023-10-23T08:15:00.000Z",
-      },
-      {
-        id: "3b",
-        name: "Croissant",
-        qty: 1,
-        price: 14500,
-        total_price: 14500,
-        category: "Food & Dining",
-        created_at: "2023-10-23T08:15:00.000Z",
-      },
-    ],
-  },
-];
+// const mockReceipts: Receipt[] = [
+//   {
+//     id: "1",
+//     store_name: "Grocery Mart",
+//     total_amount: 45200,
+//     transaction_date: new Date().toISOString(),
+//     status: "action-required",
+//     confidence: 0.65,
+//     tax: 3500,
+//     receipt_items: [
+//       {
+//         id: "1a",
+//         name: "Rice 5kg",
+//         qty: 1,
+//         price: 15000,
+//         total_price: 15000,
+//         category: "Groceries",
+//         created_at: new Date().toISOString(),
+//       },
+//       {
+//         id: "1b",
+//         name: "Cooking Oil",
+//         qty: 2,
+//         price: 8000,
+//         total_price: 16000,
+//         category: "Groceries",
+//         created_at: new Date().toISOString(),
+//       },
+//       {
+//         id: "1c",
+//         name: "Eggs",
+//         qty: 1,
+//         price: 14200,
+//         total_price: 14200,
+//         category: "Groceries",
+//         created_at: new Date().toISOString(),
+//       },
+//     ],
+//   },
+//   {
+//     id: "10",
+//     store_name: "Unidentified Store",
+//     total_amount: 15000,
+//     transaction_date: new Date().toISOString(),
+//     status: "pending",
+//     receipt_items: [],
+//   },
+//   {
+//     id: "2",
+//     store_name: "Retail Center",
+//     total_amount: 124500,
+//     transaction_date: "2023-10-24T16:30:00.000Z",
+//     status: "verified",
+//     receipt_items: [
+//       {
+//         id: "2a",
+//         name: "T-Shirt",
+//         qty: 2,
+//         price: 45000,
+//         total_price: 90000,
+//         category: "Clothing",
+//         created_at: "2023-10-24T16:30:00.000Z",
+//       },
+//       {
+//         id: "2b",
+//         name: "Socks Pack",
+//         qty: 1,
+//         price: 34500,
+//         total_price: 34500,
+//         category: "Clothing",
+//         created_at: "2023-10-24T16:30:00.000Z",
+//       },
+//     ],
+//   },
+//   {
+//     id: "3",
+//     store_name: "Coffee House",
+//     total_amount: 64500,
+//     transaction_date: "2023-10-23T08:15:00.000Z",
+//     status: "verified",
+//     receipt_items: [
+//       {
+//         id: "3a",
+//         name: "Latte",
+//         qty: 2,
+//         price: 25000,
+//         total_price: 50000,
+//         category: "Food & Dining",
+//         created_at: "2023-10-23T08:15:00.000Z",
+//       },
+//       {
+//         id: "3b",
+//         name: "Croissant",
+//         qty: 1,
+//         price: 14500,
+//         total_price: 14500,
+//         category: "Food & Dining",
+//         created_at: "2023-10-23T08:15:00.000Z",
+//       },
+//     ],
+//   },
+// ];
 
 export const ReceiptsPage = () => {
   return (
@@ -135,7 +164,7 @@ export const ReceiptsPage = () => {
 
 const Receipts = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType | null>(null);
   const [filterValues, setFilterValues] = useState<{
@@ -145,37 +174,58 @@ const Receipts = () => {
   }>({ date: null, store: null, status: null });
 
   // Data state with localStorage persistence
-  const [receipts, setReceipts] = useState<Receipt[]>(() => {
-    const saved = localStorage.getItem("mock_receipts");
-    return saved ? JSON.parse(saved) : [];
-  });
+  // const [receipts, setReceipts] = useState<Receipt[]>(() => {
+  //   const saved = localStorage.getItem("mock_receipts");
+  //   return saved ? JSON.parse(saved) : [];
+  // });
 
   // Edit Modal State
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Initial fetch/sync
-  useEffect(() => {
-    const saved = localStorage.getItem("mock_receipts");
-    if (!saved || JSON.parse(saved).length === 0) {
-      setReceipts(mockReceipts);
-    }
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+  // useEffect(() => {
+  //   const saved = localStorage.getItem("mock_receipts");
+  //   if (!saved || JSON.parse(saved).length === 0) {
+  //     setReceipts(mockReceipts);
+  //   }
+  //   const timer = setTimeout(() => setIsLoading(false), 1000);
+  //   return () => clearTimeout(timer);
+  // }, []);
 
   // Persist changes
-  useEffect(() => {
-    if (receipts.length > 0) {
-      localStorage.setItem("mock_receipts", JSON.stringify(receipts));
-    }
-  }, [receipts]);
+  // useEffect(() => {
+  //   if (receipts.length > 0) {
+  //     localStorage.setItem("mock_receipts", JSON.stringify(receipts));
+  //   }
+  // }, [receipts]);
+
+  const { data, error, refetch, isLoading } = useQuery<UserData>({
+    queryKey: ["userReceipts"],
+    queryFn: async () => {
+      const token = getToken();
+      if(!token) throw new Error("Not Authenticated")
+
+      const res = await fetch(`${BACKEND_URL}/api/receipts`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+      });
+      if (!res) throw new Error("Failed to fetch receipts");
+      
+      return (await res.json()) as UserData;
+    },
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  const receipts: UserReceipts[] = data?.receipts ?? []
 
   // Pull to refresh handler
   const handleRefresh = async () => {
-    // Simulate network request
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setReceipts(mockReceipts); // Refresh data
+    await refetch();
   };
 
   const { contentRef, pullY, isRefreshing, handlers } =
@@ -291,11 +341,9 @@ const Receipts = () => {
     },
     [handleReviewReceipt],
   );
-  const handleSaveReceipt = useCallback((updatedReceipt: Receipt) => {
-    setReceipts((prev) =>
-      prev.map((r) => (r.id === updatedReceipt.id ? updatedReceipt : r)),
-    );
-  }, []);
+  const handleSaveReceipt = useCallback(async() => {
+    await refetch();
+  }, [refetch]);
 
   const handleViewAllActionRequired = () => {
     navigate({ to: "/receipts/action-required" });
@@ -306,32 +354,15 @@ const Receipts = () => {
     selectedReceipt?.status === "pending";
 
     
-    const { data, error } = useQuery({
-    queryKey: ["userReceipts"],
-    queryFn: async () => {
-      const token = getToken();
-      if(!token) throw new Error("Not Authenticated")
-
-      const res = await fetch(`${BACKEND_URL}/api/receipts`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
-      if (!res) throw new Error("Failed to fetch receipts");
-
-      return res.json();
-    },
-    staleTime: 30 * 1000,
-    refetchOnWindowFocus: true,
-  });
+    
   
   useEffect(() => {
     if(data) {
       console.log(data)
     }
   }, [data]);
+
+  
   
   if (isLoading) {
     return <ReceiptsSkeleton />;
