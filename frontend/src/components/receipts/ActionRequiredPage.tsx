@@ -1,45 +1,85 @@
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Receipt } from "@/types";
+import type { UserReceipts } from "@/types";
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { ReceiptEditModal } from "./ReceiptEditModal";
 import { Card, CardContent } from "@/components/ui/card";
 import { formattedRupiah } from "@/utils/currency";
+import { useQuery } from "@tanstack/react-query";
+import { getToken } from "@/lib/auth";
+import type { UserData } from "@/types";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export const ActionRequiredPage = () => {
   const navigate = useNavigate();
-  const [receipts, setReceipts] = useState<Receipt[]>(() => {
-    const saved = localStorage.getItem("mock_receipts");
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  // const [receipts, setReceipts] = useState<UserReceipts[]>(() => {
+  //   const saved = localStorage.getItem("mock_receipts");
+  //   return saved ? JSON.parse(saved) : [];
+  // });
+  const [selectedReceipt, setSelectedReceipt] = useState<UserReceipts | null>(
+    null,
+  );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Sync with localStorage
+  // useEffect(() => {
+  //   localStorage.setItem("mock_receipts", JSON.stringify(receipts));
+  // }, [receipts]);
+
+  const { data, refetch } = useQuery<UserData>({
+    queryKey: ["userReceipts"], // ← queryKey sama biar shared cache
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Unauthenticated");
+
+      const res = await fetch(`${BACKEND_URL}/api/receipts`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    staleTime: 30 * 1000,
+  });
+
   useEffect(() => {
-    localStorage.setItem("mock_receipts", JSON.stringify(receipts));
-  }, [receipts]);
+    console.log("action req page", data);
+  }, [data]);
 
   const actionRequiredReceipts = useMemo(
-    () => receipts.filter((r) => r.status === "action-required"),
-    [receipts],
+    () => (data?.receipts ?? []).filter((r) => r.status === "ACTION_REQUIRED"),
+    [data],
   );
+
+  const handleReviewReceipt = useCallback((receipt: UserReceipts) => {
+    setSelectedReceipt(receipt);
+    setIsEditModalOpen(true);
+  }, []);
+
+  const handleSaveReceipt = useCallback(async () => {
+    await refetch(); // ← refetch aja, gak perlu update local state
+  }, [refetch]);
+
+  // const actionRequiredReceipts = useMemo(
+  //   () => receipts.filter((r) => r.status === "ACTION_REQUIRED"),
+  //   [receipts],
+  // );
 
   const handleBack = () => {
     navigate({ to: "/receipts" });
   };
 
-  const handleReviewReceipt = useCallback((receipt: Receipt) => {
-    setSelectedReceipt(receipt);
-    setIsEditModalOpen(true);
-  }, []);
+  // const handleReviewReceipt = useCallback((receipt: UserReceipts) => {
+  //   setSelectedReceipt(receipt);
+  //   setIsEditModalOpen(true);
+  // }, []);
 
-  const handleSaveReceipt = useCallback((updatedReceipt: Receipt) => {
-    setReceipts((prev) =>
-      prev.map((r) => (r.id === updatedReceipt.id ? updatedReceipt : r)),
-    );
-  }, []);
+  // const handleSaveReceipt = useCallback((updatedReceipt: UserReceipts) => {
+  //   setReceipts((prev) =>
+  //     prev.map((r) => (r.id === updatedReceipt.id ? updatedReceipt : r)),
+  //   );
+  // }, []);
 
   return (
     <div className="pb-24 min-h-screen bg-[#0b0e11] text-white">
@@ -88,7 +128,7 @@ export const ActionRequiredPage = () => {
 };
 
 interface ActionRequiredListItemProps {
-  receipt: Receipt;
+  receipt: UserReceipts;
   onReview: () => void;
 }
 
@@ -103,6 +143,14 @@ const ActionRequiredListItem = ({
     minute: "2-digit",
     hour12: true,
   });
+
+  const avgConfidence =
+    receipt.low_confidence_fields?.length > 0
+      ? receipt.low_confidence_fields.reduce(
+          (acc, f) => acc + f.confidence,
+          0,
+        ) / receipt.low_confidence_fields.length
+      : 0.65;
 
   return (
     <Card className="bg-[#1a2129] border border-gray-800/50 rounded-[24px] text-white overflow-hidden shadow-xl">
@@ -141,7 +189,7 @@ const ActionRequiredListItem = ({
           <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-yellow-500 rounded-full"
-              style={{ width: `${(receipt.confidence || 0.65) * 100}%` }}
+              style={{ width: `${avgConfidence * 100}%` }}
             />
           </div>
           <div className="flex justify-end">
