@@ -6,7 +6,7 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import { formattedRupiah } from "@/utils/currency";
-import { setToken } from "@/lib/auth";
+// import { setToken } from "@/lib/auth";
 // import { transformCategoryData } from "@/utils/categoryHelpers";
 
 // import { useQuery } from "@tanstack/react-query";
@@ -194,8 +194,8 @@ export const Dashboard = () => {
 
 const UserDashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
-  const [userData, setUserData] = useState<string | null>(null);
-  const [userReceipts, setUserReceipts] = useState<UserReceipts[]>([]);
+  const [userReceipts, setUserReceipts] = useState<string | null>(null);
+  const [userReceiptsItem, setUserReceiptsItem] = useState<UserReceipts[]>([]);
   const [telegramUserProfile, setTelegramUserProfile] =
     useState<TelegramUser | null>(null);
   const [photoUrl, SetPhotoUrl] = useState<string | null>(null);
@@ -229,7 +229,7 @@ const UserDashboard = () => {
           return;
         }
         console.log("init data", initData);
-        setUserData(initData);
+        setUserReceipts(initData);
 
         telegram.ready();
         const params = new URLSearchParams(initData);
@@ -254,28 +254,28 @@ const UserDashboard = () => {
   }, []);
 
   const { data, error } = useQuery({
-    queryKey: ["userReceipts", userData],
+    queryKey: ["userReceipts", userReceipts],
     queryFn: async () => {
       const res = await fetch(`${BACKEND_URL}/api/user-data`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          //  "X-Telegram-Init-Data": userData ?? "",
         },
-        body: JSON.stringify({ userData }),
+        credentials: "include",
+        body: JSON.stringify({ userReceipts }),
       });
 
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    enabled: !!userData,
+    enabled: !!userReceipts,
   });
 
   useEffect(() => {
     if (data) {
       setTelegramUserProfile(data.userProfile);
-      setUserReceipts(data.userReceipts);
-      setToken(data.token)
+      setUserReceiptsItem(data.userReceipts);
+      // setToken(data.token)
       // setTelegramUser(data.userReceipts);
       // console.log("token", data.token)
       // console.log("telegramUser:", telegramUserProfile);
@@ -300,7 +300,7 @@ const UserDashboard = () => {
   // }, [userReceipts])
 
   const groupedStores = useMemo(() => {
-    const storeMap = userReceipts.reduce(
+    const storeMap = userReceiptsItem.reduce(
       (acc, receipt) => {
         const key = receipt.store_name
           .trim()
@@ -328,14 +328,14 @@ const UserDashboard = () => {
           store_name: string;
           transaction_count: number;
           total_amount: number;
-          receipts: typeof userReceipts;
+          receipts: typeof userReceiptsItem;
         }
       >,
     );
 
     return Object.values(storeMap);
   }, [userReceipts]);
-  const flatItems = userReceipts?.flatMap((receipt) => receipt.receipt_items);
+  const flatItems = userReceiptsItem?.flatMap((receipt) => receipt.receipt_items);
   console.log("userReceipts", userReceipts);
 
   // const mapItems = flatItems.map((item) => item.total)
