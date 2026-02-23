@@ -195,7 +195,7 @@ app.post(
     const params = new URLSearchParams(userData);
     const userJson = params.get("user");
     const telegramUser = JSON.parse(userJson || "{}");
-    const telegram_id = telegramUser.id;
+    const telegram_id = String(telegramUser.id);
 
     const { data: userProfile, error: userError } = await db
       .from("users")
@@ -205,19 +205,9 @@ app.post(
 
     if (userError) return c.json({ error: userError.message }, 500);
 
-    const token = await sign(
-      {
-        telegram_id,
-        user_id: userProfile.id,
-        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
-      },
-      c.env.JWT_SECRET,
-      "HS256",
-    );
-
     const accessToken = await sign(
       {
-        telegram_id,
+        telegram_id: telegram_id,
         user_id: userProfile.id,
         exp: Math.floor(Date.now() / 1000) + 60 * 15,
       },
@@ -225,30 +215,30 @@ app.post(
       "HS256",
     );
 
-    const refreshToken = await sign(
-      {
-        telegram_id,
-        user_id: userProfile.id,
-        type: "refresh",
-        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
-      },
-      c.env.JWT_SECRET,
-      "HS256",
-    );
+    // const refreshToken = await sign(
+    //   {
+    //     telegram_id: telegram_id,
+    //     user_id: userProfile.id,
+    //     type: "refresh",
+    //     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
+    //   },
+    //   c.env.JWT_SECRET,
+    //   "HS256",
+    // );
 
-    setCookie(c, "access_token", accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      maxAge: 60 * 15,
-    });
+    // setCookie(c, "access_token", accessToken, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: "None",
+    //   maxAge: 60 * 15,
+    // });
 
-    setCookie(c, "refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    // setCookie(c, "refresh_token", refreshToken, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: "None",
+    //   maxAge: 60 * 60 * 24 * 7,
+    // });
     // const userId = c.req.query("user_id")
     // const userId = telegramUser.user_id;
 
@@ -264,15 +254,20 @@ app.post(
 
     console.log(userProfile, userReceipts);
 
-    return c.json({ userProfile, userReceipts });
+    return c.json({ userProfile, userReceipts, accessToken });
   },
 );
 
 app.get("/api/receipts", async (c) => {
   const db = supabaseClient(c.env);
-  const token = getCookie(c, "access_token");
-  if (!token) return c.json({ error: "Unauthorized" }, 401);
-
+  // const token = getCookie(c, "access_token");
+  const header = c.req.header("Authorization")
+  
+   if (!header?.startsWith("Bearer ")) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  
+  const token = header?.split(" ")[1];
   try {
     const payload = await verify(token, c.env.JWT_SECRET, "HS256");
     const user_id = payload.user_id;
