@@ -25,7 +25,6 @@ interface LowConfidenceFields {
   field: string;
   confidence: number;
   value: string | number | null;
-
 }
 interface ReceiptItem {
   id: string;
@@ -42,13 +41,12 @@ interface UserReceipts {
   total_amount: number;
   transaction_date: string;
   status: "pending" | "action-required" | "verified";
-  low_confidence_fields: LowConfidenceFields[]
+  low_confidence_fields: LowConfidenceFields[];
   receipt_items: ReceiptItem[];
 }
 interface UserData {
-  receipts: UserReceipts[]
+  receipts: UserReceipts[];
 }
-
 
 // Mock receipt data for development
 // const mockReceipts: Receipt[] = [
@@ -203,18 +201,25 @@ const Receipts = () => {
   const { data, error, refetch, isLoading } = useQuery<UserData>({
     queryKey: ["userReceipts"],
     queryFn: async () => {
+
       const token = getToken();
-      if(!token) throw new Error("Not Authenticated")
+      if(!token) throw new Error("Unauthenticated")
 
       const res = await fetch(`${BACKEND_URL}/api/receipts`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
-        credentials: "include"
+        credentials: "include",
       });
       if (!res) throw new Error("Failed to fetch receipts");
-      
+
+      console.log("Status:", res.status);
+      console.log("Response:", await res.clone().text());
+
+      if (!res.ok) throw new Error(`Failed: ${res.status}`);
+
       return (await res.json()) as UserData;
     },
     staleTime: 30 * 1000,
@@ -222,12 +227,12 @@ const Receipts = () => {
   });
 
   useEffect(() => {
-    if(data) {
-      console.log(data)
+    if (data) {
+      console.log(data);
     }
   }, [data]);
 
-  const receipts: UserReceipts[] = data?.receipts ?? []
+  const receipts: UserReceipts[] = data?.receipts ?? [];
 
   // Pull to refresh handler
   const handleRefresh = async () => {
@@ -347,7 +352,7 @@ const Receipts = () => {
     },
     [handleReviewReceipt],
   );
-  const handleSaveReceipt = useCallback(async() => {
+  const handleSaveReceipt = useCallback(async () => {
     await refetch();
   }, [refetch]);
 
@@ -359,14 +364,11 @@ const Receipts = () => {
     selectedReceipt?.status === "verified" ||
     selectedReceipt?.status === "pending";
 
-
-  
-  
   if (isLoading) {
     return <ReceiptsSkeleton />;
   }
 
-  if(error) throw new Error("Data tidak keangkut cuy...")
+  if (error) throw new Error("Data tidak keangkut cuy...", error);
 
   return (
     <div
