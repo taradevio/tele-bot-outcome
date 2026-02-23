@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Receipt } from "@/types";
+import type { UserReceipts } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formattedRupiah } from "@/utils/currency";
@@ -14,9 +14,9 @@ import {
 } from "lucide-react";
 
 interface RecentActivityListProps {
-  receipts: Receipt[];
-  onReceiptClick?: (receipt: Receipt) => void;
-  onStatusClick?: (receipt: Receipt, status: string) => void;
+  receipts: UserReceipts[];
+  onReceiptClick?: (receipt: UserReceipts) => void;
+  onStatusClick?: (receipt: UserReceipts, status: string) => void;
 }
 
 const storeIcons: Record<string, { icon: typeof ShoppingBag; color: string }> =
@@ -45,17 +45,17 @@ const statusConfig: Record<
   string,
   { label: string; className: string; icon?: any }
 > = {
-  verified: {
+  VERIFIED: {
     label: "VERIFIED",
     className: "bg-green-500/20 text-green-400 border-green-500/30",
     icon: CheckCircle2,
   },
-  pending: {
+  PENDING: {
     label: "PENDING",
     className: "bg-orange-500/20 text-orange-400 border-orange-500/30",
     icon: Clock,
   },
-  "action-required": {
+  ACTION_REQUIRED: {
     label: "ACTION REQUIRED",
     className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   },
@@ -71,7 +71,7 @@ export const RecentActivityList = ({
   );
 
   const groupedReceipts = useMemo(() => {
-    const groups: Record<string, Receipt[]> = {};
+    const groups: Record<string, UserReceipts[]> = {};
     const now = new Date();
     const today = now.toDateString();
     const yesterday = new Date(now);
@@ -103,11 +103,11 @@ export const RecentActivityList = ({
     return groups;
   }, [receipts]);
 
-  const handleStatusClick = (e: React.MouseEvent, receipt: Receipt) => {
+  const handleStatusClick = (e: React.MouseEvent, receipt: UserReceipts) => {
     e.stopPropagation();
-    const status = receipt.status || "verified";
+    const status = receipt.status || "VERIFIED";
 
-    if (status === "pending") {
+    if (status === "PENDING") {
       setTooltip({ id: receipt.id, text: "Processing..." });
       setTimeout(() => setTooltip(null), 2000);
     } else {
@@ -137,7 +137,7 @@ export const RecentActivityList = ({
                   hour12: true,
                 });
 
-                const status = receipt.status || "verified";
+                const status = receipt.status || "VERIFIED";
                 const statusInfo =
                   statusConfig[status] || statusConfig.verified;
                 const { icon: StoreIcon, color } = getStoreIcon(

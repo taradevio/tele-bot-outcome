@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import type { Receipt } from "@/types";
+// import type { Receipt } from "@/types";
 import { ReceiptHeader } from "./ReceiptHeader";
 import { ReceiptSearchBar } from "./ReceiptSearchBar";
 import { ReceiptFilterChips, type FilterType } from "./ReceiptFilterChips";
@@ -40,7 +40,7 @@ interface UserReceipts {
   store_name: string;
   total_amount: number;
   transaction_date: string;
-  status: "pending" | "action-required" | "verified";
+  status: "PENDING" | "ACTION_REQUIRED" | "VERIFIED";
   low_confidence_fields: LowConfidenceFields[];
   receipt_items: ReceiptItem[];
 }
@@ -178,7 +178,7 @@ const Receipts = () => {
   // });
 
   // Edit Modal State
-  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<UserReceipts | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Initial fetch/sync
@@ -201,15 +201,14 @@ const Receipts = () => {
   const { data, error, refetch, isLoading } = useQuery<UserData>({
     queryKey: ["userReceipts"],
     queryFn: async () => {
-
       const token = await getToken();
-      if(!token) throw new Error("Unauthenticated")
+      if (!token) throw new Error("Unauthenticated");
 
       const res = await fetch(`${BACKEND_URL}/api/receipts`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         credentials: "include",
       });
@@ -250,7 +249,7 @@ const Receipts = () => {
 
   // Shared filter function
   const applyFilters = useCallback(
-    (receipt: Receipt) => {
+    (receipt: UserReceipts) => {
       // Search filter
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -307,14 +306,14 @@ const Receipts = () => {
   // Filtered Action Required receipts
   const actionRequiredResults = useMemo(() => {
     return receipts.filter(
-      (r) => r.status === "action-required" && applyFilters(r),
+      (r) => r.status === "ACTION_REQUIRED" && applyFilters(r),
     );
   }, [receipts, applyFilters]);
 
   // Filtered Recent Activity receipts (excluding action-required)
   const recentActivityResults = useMemo(() => {
     return receipts.filter(
-      (r) => r.status !== "action-required" && applyFilters(r),
+      (r) => r.status !== "ACTION_REQUIRED" && applyFilters(r),
     );
   }, [receipts, applyFilters]);
 
@@ -339,14 +338,14 @@ const Receipts = () => {
     [],
   );
 
-  const handleReviewReceipt = useCallback((receipt: Receipt) => {
+  const handleReviewReceipt = useCallback((receipt: UserReceipts) => {
     setSelectedReceipt(receipt);
     setIsEditModalOpen(true);
   }, []);
 
   const handleStatusClick = useCallback(
-    (receipt: Receipt) => {
-      if (receipt.status === "verified" || receipt.status === "pending") {
+    (receipt: UserReceipts) => {
+      if (receipt.status === "VERIFIED" || receipt.status === "PENDING") {
         handleReviewReceipt(receipt);
       }
     },
@@ -361,8 +360,8 @@ const Receipts = () => {
   };
 
   const isReadOnly =
-    selectedReceipt?.status === "verified" ||
-    selectedReceipt?.status === "pending";
+    selectedReceipt?.status === "VERIFIED" ||
+    selectedReceipt?.status === "PENDING";
 
   if (isLoading) {
     return <ReceiptsSkeleton />;

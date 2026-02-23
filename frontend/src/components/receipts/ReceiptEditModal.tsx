@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import type { Receipt, ReceiptItem } from "@/types";
+import type { UserReceipts, ReceiptItem } from "@/types";
+import { getToken } from "@/lib/auth";
 import {
   X,
   // ZoomIn,
@@ -35,11 +36,13 @@ const DarkInput = ({
   />
 );
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 interface ReceiptEditModalProps {
-  receipt: Receipt;
+  receipt: UserReceipts;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedReceipt: Receipt) => void;
+  onSave: () => void;
   isReadOnly?: boolean;
 }
 
@@ -50,7 +53,7 @@ export const ReceiptEditModal = ({
   onSave,
   isReadOnly = false,
 }: ReceiptEditModalProps) => {
-  const [editedReceipt, setEditedReceipt] = useState<Receipt>(receipt);
+  const [editedReceipt, setEditedReceipt] = useState<UserReceipts>(receipt);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -74,48 +77,71 @@ export const ReceiptEditModal = ({
 
   const totalMismatch = Math.abs(itemsTotal - editedReceipt.total_amount) > 100; // Allow small rounding diff
 
-  const handleSave = () => {
-    // If it was action-required, it moves to pending.
-    // If it was pending (already processing), we might want to manually 'verify' it for testing.
-    const nextStatus =
-      editedReceipt.status === "action-required" ? "pending" : "verified";
+  // const handleSave = () => {
+  //   // If it was action-required, it moves to pending.
+  //   // If it was pending (already processing), we might want to manually 'verify' it for testing.
+  //   const nextStatus =
+  //     editedReceipt.status === "ACTION_REQUIRED" ? "PENDING" : "VERIFIED";
 
-    // Track what was edited
-    const editedFields: string[] = [...(editedReceipt.edited_fields || [])];
+  //   // Track what was edited
+  //   const editedFields: string[] = [...(editedReceipt.edited_fields || [])];
 
-    if (
-      editedReceipt.store_name !== receipt.store_name &&
-      !editedFields.includes("store_name")
-    ) {
-      editedFields.push("store_name");
-    }
-    if (
-      editedReceipt.total_amount !== receipt.total_amount &&
-      !editedFields.includes("total_amount")
-    ) {
-      editedFields.push("total_amount");
-    }
-    if (
-      editedReceipt.transaction_date !== receipt.transaction_date &&
-      !editedFields.includes("transaction_date")
-    ) {
-      editedFields.push("transaction_date");
-    }
-    if (
-      JSON.stringify(editedReceipt.receipt_items) !==
-        JSON.stringify(receipt.receipt_items) &&
-      !editedFields.includes("items")
-    ) {
-      editedFields.push("items");
-    }
+  //   if (
+  //     editedReceipt.store_name !== receipt.store_name &&
+  //     !editedFields.includes("store_name")
+  //   ) {
+  //     editedFields.push("store_name");
+  //   }
+  //   if (
+  //     editedReceipt.total_amount !== receipt.total_amount &&
+  //     !editedFields.includes("total_amount")
+  //   ) {
+  //     editedFields.push("total_amount");
+  //   }
+  //   if (
+  //     editedReceipt.transaction_date !== receipt.transaction_date &&
+  //     !editedFields.includes("transaction_date")
+  //   ) {
+  //     editedFields.push("transaction_date");
+  //   }
+  //   if (
+  //     JSON.stringify(editedReceipt.receipt_items) !==
+  //       JSON.stringify(receipt.receipt_items) &&
+  //     !editedFields.includes("items")
+  //   ) {
+  //     editedFields.push("items");
+  //   }
 
-    onSave({
+  //   onSave({
+  //     ...editedReceipt,
+  //     status: nextStatus,
+  //     edited_fields: editedFields,
+  //   });
+  //   onClose();
+  // };
+
+  const handleSave = async () => {
+  const nextStatus = editedReceipt.status === "ACTION_REQUIRED" ? "PENDING" : "VERIFIED";
+  const token = await getToken()
+  
+  // Hit BE buat update receipt
+  const res = await fetch(`${BACKEND_URL}/api/receipts/${editedReceipt.id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({
       ...editedReceipt,
       status: nextStatus,
-      edited_fields: editedFields,
-    });
-    onClose();
-  };
+    })
+  });
+
+  if (!res.ok) return; // handle error
+  
+  onSave(); // trigger refetch di parent
+  onClose();
+};
 
   const handleAddItem = () => {
     const newItem: ReceiptItem = {
@@ -184,7 +210,7 @@ export const ReceiptEditModal = ({
       <div className="flex-1 overflow-y-auto bg-[#0b0e11] relative">
         {/* Image Section — only shown for action-required (editing mode) */}
         {!isReadOnly && (
-          <div className="h-[300px] bg-[#1a2129] relative overflow-hidden group shrink-0">
+          <div className="h-75 bg-[#1a2129] relative overflow-hidden group shrink-0">
             {/* Mock Receipt Image */}
             <div
               className="w-full h-full flex items-center justify-center cursor-move"
@@ -213,7 +239,7 @@ export const ReceiptEditModal = ({
               <img
                 src="https://images.unsplash.com/photo-1596558450268-9c27524ba856?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
                 alt="Receipt"
-                className="max-w-none w-auto h-auto min-w-[200px] object-contain opacity-80"
+                className="max-w-none w-auto h-auto min-w-50 object-contain opacity-80"
               />
               {/* Mock Overlay Box */}
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 border-2 border-yellow-500 bg-yellow-500/10 w-48 h-24 rounded pointer-events-none" />
@@ -268,12 +294,12 @@ export const ReceiptEditModal = ({
                 <div className="flex items-center gap-3">
                   <div
                     className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
-                      receipt.status === "verified"
+                      receipt.status === "VERIFIED"
                         ? "bg-red-500/10"
                         : "bg-blue-600/20"
                     }`}
                   >
-                    {receipt.status === "verified" ? (
+                    {receipt.status === "VERIFIED" ? (
                       <ShoppingBag className="h-6 w-6 text-red-500" />
                     ) : (
                       <ReceiptIcon className="h-6 w-6 text-blue-500" />
@@ -286,7 +312,7 @@ export const ReceiptEditModal = ({
                           <h2 className="text-xl font-bold text-white leading-tight">
                             {receipt.store_name}
                           </h2>
-                          {receipt.status === "pending" &&
+                          {receipt.status === "PENDING" &&
                             receipt.edited_fields?.includes("store_name") && (
                               <span className="text-[10px] text-blue-400 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded leading-none border border-blue-500/20">
                                 EDITED
@@ -323,7 +349,7 @@ export const ReceiptEditModal = ({
                           { hour: "2-digit", minute: "2-digit" },
                         )}
                       </span>
-                      {receipt.status === "pending" &&
+                      {receipt.status === "PENDING" &&
                         receipt.edited_fields?.includes("transaction_date") && (
                           <span className="text-[9px] text-blue-400 font-bold">
                             (Edited)
@@ -336,12 +362,12 @@ export const ReceiptEditModal = ({
                 {isReadOnly && (
                   <Badge
                     className={`rounded-full py-0.5 px-2 text-[10px] flex items-center gap-1 border border-transparent ${
-                      receipt.status === "verified"
+                      receipt.status === "VERIFIED"
                         ? "bg-green-500/20 text-green-400 border-green-500/30"
                         : "bg-orange-500/20 text-orange-400 border-orange-500/30"
                     }`}
                   >
-                    {receipt.status === "verified" ? (
+                    {receipt.status === "VERIFIED" ? (
                       <CheckCircle2 className="h-3 w-3" />
                     ) : (
                       <Clock className="h-3 w-3" />
@@ -430,7 +456,7 @@ export const ReceiptEditModal = ({
                       <label className="text-gray-400 text-sm mb-1.5 block">
                         Tax
                       </label>
-                      <div className="relative">
+                      {/* <div className="relative">
                         <span className="absolute left-3 top-2.5 text-gray-400">
                           $
                         </span>
@@ -444,7 +470,7 @@ export const ReceiptEditModal = ({
                           }
                           className="pl-6"
                         />
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </>
@@ -458,7 +484,7 @@ export const ReceiptEditModal = ({
                       <p className="text-xl font-black text-white">
                         {formattedRupiah(receipt.total_amount)}
                       </p>
-                      {receipt.status === "pending" &&
+                      {receipt.status === "PENDING" &&
                         receipt.edited_fields?.includes("total_amount") && (
                           <span className="text-[9px] text-blue-400 font-bold">
                             (Edited)
@@ -466,12 +492,12 @@ export const ReceiptEditModal = ({
                         )}
                     </div>
                   </div>
-                  <div className="bg-[#1a2129] p-4 rounded-2xl border border-gray-800/50">
+                  {/* <div className="bg-[#1a2129] p-4 rounded-2xl border border-gray-800/50">
                     <p className="text-xs text-gray-500 font-bold mb-1">TAX</p>
                     <p className="text-xl font-bold text-gray-300">
                       {formattedRupiah(receipt.tax || 0)}
                     </p>
-                  </div>
+                  </div> */}
                 </div>
               )}
             </div>
@@ -494,14 +520,14 @@ export const ReceiptEditModal = ({
                   Items
                 </h3>
                 {isReadOnly &&
-                  receipt.status === "pending" &&
+                  receipt.status === "PENDING" &&
                   receipt.edited_fields?.includes("items") && (
                     <span className="text-[10px] text-blue-400 font-bold ml-2">
                       (Edited)
                     </span>
                   )}
               </div>
-              {isReadOnly && receipt.status === "verified" && (
+              {isReadOnly && receipt.status === "VERIFIED" && (
                 <Button
                   variant="ghost"
                   size="sm"
