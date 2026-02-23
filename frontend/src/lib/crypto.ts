@@ -1,10 +1,14 @@
 const ENCRYPTION_KEY = import.meta.env.VITE_STORAGE_KEY;
 
 const getKey = async () => {
-  const keyData = new TextEncoder().encode(ENCRYPTION_KEY);
+  // const keyData = new TextEncoder().encode(ENCRYPTION_KEY);
+  const keyBuffer = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(ENCRYPTION_KEY)
+  );
   return await crypto.subtle.importKey(
     "raw",
-    keyData,
+    keyBuffer,
     { name: "AES-GCM", length: 256 },
     false,
     ["encrypt", "decrypt"],
