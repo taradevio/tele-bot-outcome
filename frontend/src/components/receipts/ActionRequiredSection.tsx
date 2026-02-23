@@ -1,4 +1,4 @@
-import type { Receipt } from "@/types";
+import type { UserReceipts } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 // import { Progress } from "@/components/ui/progress";
@@ -6,9 +6,9 @@ import { formattedRupiah } from "@/utils/currency";
 import { ShoppingBag } from "lucide-react";
 
 interface ActionRequiredSectionProps {
-  receipts: Receipt[];
+  receipts: UserReceipts[];
   onViewAll: () => void;
-  onReviewReceipt: (receipt: Receipt) => void;
+  onReviewReceipt: (receipt: UserReceipts) => void;
 }
 
 export const ActionRequiredSection = ({
@@ -62,7 +62,7 @@ export const ActionRequiredSection = ({
 };
 
 interface ActionRequiredCardProps {
-  receipt: Receipt;
+  receipt: UserReceipts;
   onReview: () => void;
   style?: React.CSSProperties;
 }
@@ -86,6 +86,14 @@ const ActionRequiredCard = ({
     minute: "2-digit",
     hour12: true,
   });
+
+  const avgConfidence =
+    receipt.low_confidence_fields?.length > 0
+      ? receipt.low_confidence_fields.reduce(
+          (acc, f) => acc + f.confidence,
+          0,
+        ) / receipt.low_confidence_fields.length
+      : 0.65;
 
   return (
     <Card
@@ -132,7 +140,7 @@ const ActionRequiredCard = ({
           <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-yellow-500 rounded-full"
-              style={{ width: `${(receipt.confidence || 0.65) * 100}%` }}
+              style={{ width: `${(avgConfidence) * 100}%` }}
             />
           </div>
           <div className="flex justify-end">
