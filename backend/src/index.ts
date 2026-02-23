@@ -277,7 +277,7 @@ app.get("/api/receipts", async (c) => {
         "id, store_name, total_amount, transaction_date, receipt_items (id, name, qty, price, total_price, category, created_at)",
       )
       .eq("user_id", user_id)
-      .order("transaction_date", { ascending: false });
+      .order("created_at", { ascending: false });
 
     if (error) return c.json({ error: error.message }, 500);
     return c.json({ receipts: data });
