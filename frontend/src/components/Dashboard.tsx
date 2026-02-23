@@ -6,7 +6,7 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import { formattedRupiah } from "@/utils/currency";
-// import { setToken } from "@/lib/auth";
+import { setToken } from "@/lib/auth";
 // import { transformCategoryData } from "@/utils/categoryHelpers";
 
 // import { useQuery } from "@tanstack/react-query";
@@ -262,7 +262,7 @@ const UserDashboard = () => {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ userReceipts }),
+        body: JSON.stringify({ userData: userReceipts }),
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -275,9 +275,9 @@ const UserDashboard = () => {
     if (data) {
       setTelegramUserProfile(data.userProfile);
       setUserReceiptsItem(data.userReceipts);
-      // setToken(data.token)
+      setToken(data.accessToken)
       // setTelegramUser(data.userReceipts);
-      // console.log("token", data.token)
+      console.log("data", userReceipts)
       // console.log("telegramUser:", telegramUserProfile);
     }
   }, [data]);
