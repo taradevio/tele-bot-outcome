@@ -15,8 +15,6 @@ import {
   // ChevronUp,
   MoreVertical,
   ShoppingBag,
-  FileText,
-  ChevronRight,
   GitMerge,
   Share2,
 } from "lucide-react";
@@ -184,70 +182,76 @@ export const ReceiptEditModal = ({
 
       {/* Main Content - Split or Scrollable */}
       <div className="flex-1 overflow-y-auto bg-[#0b0e11] relative">
-        {/* Image Section */}
-        <div className="h-[300px] bg-[#1a2129] relative overflow-hidden group shrink-0">
-          {/* Mock Receipt Image */}
-          <div
-            className="w-full h-full flex items-center justify-center cursor-move"
-            style={{
-              transform: `scale(${zoomLevel}) translate(${panPosition.x}px, ${panPosition.y}px)`,
-              transition: isDragging ? "none" : "transform 0.2s ease-out",
-            }}
-            onMouseDown={(e) => {
-              setIsDragging(true);
-              setDragStart({
-                x: e.clientX - panPosition.x,
-                y: e.clientY - panPosition.y,
-              });
-            }}
-            onMouseMove={(e) => {
-              if (isDragging) {
-                setPanPosition({
-                  x: e.clientX - dragStart.x,
-                  y: e.clientY - dragStart.y,
+        {/* Image Section — only shown for action-required (editing mode) */}
+        {!isReadOnly && (
+          <div className="h-[300px] bg-[#1a2129] relative overflow-hidden group shrink-0">
+            {/* Mock Receipt Image */}
+            <div
+              className="w-full h-full flex items-center justify-center cursor-move"
+              style={{
+                transform: `scale(${zoomLevel}) translate(${panPosition.x}px, ${panPosition.y}px)`,
+                transition: isDragging ? "none" : "transform 0.2s ease-out",
+              }}
+              onMouseDown={(e) => {
+                setIsDragging(true);
+                setDragStart({
+                  x: e.clientX - panPosition.x,
+                  y: e.clientY - panPosition.y,
                 });
-              }
-            }}
-            onMouseUp={() => setIsDragging(false)}
-            onMouseLeave={() => setIsDragging(false)}
-          >
-            <img
-              src="https://images.unsplash.com/photo-1596558450268-9c27524ba856?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-              alt="Receipt"
-              className="max-w-none w-auto h-auto min-w-[200px] object-contain opacity-80"
-            />
-            {/* Mock Overlay Box */}
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 border-2 border-yellow-500 bg-yellow-500/10 w-48 h-24 rounded pointer-events-none" />
-          </div>
-
-          {/* Image Controls */}
-          <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-            <Button
-              size="icon"
-              variant="secondary"
-              className="bg-gray-800 text-white rounded-full h-10 w-10"
-              onClick={handleZoomIn}
+              }}
+              onMouseMove={(e) => {
+                if (isDragging) {
+                  setPanPosition({
+                    x: e.clientX - dragStart.x,
+                    y: e.clientY - dragStart.y,
+                  });
+                }
+              }}
+              onMouseUp={() => setIsDragging(false)}
+              onMouseLeave={() => setIsDragging(false)}
             >
-              <Plus className="h-5 w-5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="secondary"
-              className="bg-gray-800 text-white rounded-full h-10 w-10"
-              onClick={handleZoomOut}
-            >
-              <div className="h-0.5 w-4 bg-white" />
-            </Button>
-          </div>
+              <img
+                src="https://images.unsplash.com/photo-1596558450268-9c27524ba856?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                alt="Receipt"
+                className="max-w-none w-auto h-auto min-w-[200px] object-contain opacity-80"
+              />
+              {/* Mock Overlay Box */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 border-2 border-yellow-500 bg-yellow-500/10 w-48 h-24 rounded pointer-events-none" />
+            </div>
 
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-            {/* Simple visual cue for low confidence if needed */}
+            {/* Image Controls */}
+            <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+              <Button
+                size="icon"
+                variant="secondary"
+                className="bg-gray-800 text-white rounded-full h-10 w-10"
+                onClick={handleZoomIn}
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="secondary"
+                className="bg-gray-800 text-white rounded-full h-10 w-10"
+                onClick={handleZoomOut}
+              >
+                <div className="h-0.5 w-4 bg-white" />
+              </Button>
+            </div>
+
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+              {/* Simple visual cue for low confidence if needed */}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Drag Handle for Bottom Sheet look */}
-        <div className="bg-[#0f1419] rounded-t-3xl -mt-6 relative pt-2 px-6 pb-24 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
-          <div className="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6" />
+        <div
+          className={`bg-[#0f1419] relative px-6 pb-24 ${!isReadOnly ? "rounded-t-3xl -mt-6 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]" : "pt-6"}`}
+        >
+          {!isReadOnly && (
+            <div className="w-12 h-1.5 bg-gray-700 rounded-full mx-auto mb-6" />
+          )}
 
           {/* Section: Details */}
           <div className="mb-8">
@@ -638,28 +642,6 @@ export const ReceiptEditModal = ({
               </p>
             )}
           </div>
-
-          {isReadOnly && (
-            <div className="mt-8 space-y-4">
-              <Button
-                variant="outline"
-                className="w-full bg-[#1a2129] border-gray-800 text-white rounded-xl h-14 justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 bg-gray-800 rounded-lg flex items-center justify-center">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium text-sm">Original Receipt</p>
-                    <p className="text-xs text-gray-500">
-                      Tap to view full image
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-gray-600" />
-              </Button>
-            </div>
-          )}
         </div>
       </div>
 
