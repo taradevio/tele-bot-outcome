@@ -1,8 +1,10 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { jwt, sign } from "hono/jwt";
+import { jwt, sign, verify } from "hono/jwt";
+import { setCookie, getCookie } from "hono/cookie";
 import supabaseClient from "./middleware/auth";
 import { verifyTelegramHash } from "./utils/verifyTelegram";
+import { cspMiddleware } from "./middleware/csp";
 type Env = {
   Bindings: {
     SUPABASE_URL: string;
@@ -28,6 +30,8 @@ app.use(
     credentials: true,
   }),
 );
+
+app.use("*", cspMiddleware);
 
 app.post("/process-receipt", async (c) => {
   const db = supabaseClient(c.env);
@@ -210,6 +214,41 @@ app.post(
       c.env.JWT_SECRET,
       "HS256",
     );
+
+    const accessToken = await sign(
+      {
+        telegram_id,
+        user_id: userProfile.id,
+        exp: Math.floor(Date.now() / 1000) + 60 * 15,
+      },
+      c.env.JWT_SECRET,
+      "HS256",
+    );
+
+    const refreshToken = await sign(
+      {
+        telegram_id,
+        user_id: userProfile.id,
+        type: "refresh",
+        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
+      },
+      c.env.JWT_SECRET,
+      "HS256",
+    );
+
+    setCookie(c, "access_token", accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+      maxAge: 60 * 15,
+    });
+
+    setCookie(c, "refresh_token", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+      maxAge: 60 * 60 * 24 * 7,
+    });
     // const userId = c.req.query("user_id")
     // const userId = telegramUser.user_id;
 
@@ -225,19 +264,18 @@ app.post(
 
     console.log(userProfile, userReceipts);
 
-    return c.json({ userProfile, userReceipts, token });
+    return c.json({ userProfile, userReceipts });
   },
 );
 
-app.get(
-  "/api/receipts",
-  (c, next) => jwt({ secret: c.env.JWT_SECRET, alg: "HS256" })(c, next),
-  async (c) => {
-    const db = supabaseClient(c.env);
-    const user_id = c.get("jwtPayload");
+app.get("/api/receipts", async (c) => {
+  const db = supabaseClient(c.env);
+  const token = getCookie(c, "access_token");
+  if (!token) return c.json({ error: "Unauthorized" }, 401);
 
-    // const { receiptData } = c.req.json();
-
+  try {
+    const payload = await verify(token, c.env.JWT_SECRET, "HS256");
+    const user_id = payload.user_id;
     const { data, error } = await db
       .from("receipts")
       .select(
@@ -247,10 +285,11 @@ app.get(
       .order("transaction_date", { ascending: false });
 
     if (error) return c.json({ error: error.message }, 500);
-
     return c.json({ receipts: data });
-  },
-);
+  } catch (error) {
+    return c.json({ error: "Invalid token" }, 401);
+  }
+});
 
 app.post("/login", async (c) => {});
 
