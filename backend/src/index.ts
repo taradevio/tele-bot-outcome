@@ -248,7 +248,7 @@ app.post(
     const { data: userReceipts, error: errorReceipts } = await db
       .from("receipts")
       .select(
-        "id, store_name, total_amount, transaction_date, receipt_items (id, name, qty, price, total_price, category, created_at)",
+        "id, store_name, total_amount, transaction_date, receipt_items (id, name, qty, price, total_price, category, created_at, discount_type, discount_value, voucher_amount)",
       )
       .eq("user_id", userProfile.id);
 
@@ -277,7 +277,7 @@ app.get("/api/receipts", async (c) => {
     const { data, error } = await db
       .from("receipts")
       .select(
-        "id, store_name, total_amount, transaction_date, status, low_confidence_fields, receipt_items (id, name, qty, price, total_price, category, created_at)",
+        "id, store_name, total_amount, transaction_date, status, low_confidence_fields, receipt_items (id, name, qty, price, total_price, category, created_at, discount_type, discount_value, voucher_amount)",
       )
       .eq("user_id", user_id)
       .order("created_at", { ascending: false });
@@ -348,6 +348,9 @@ app.put("/api/receipts/:receipt_id", async (c) => {
         price: item.price,
         total_price: item.total_price,
         category: item.category,
+        discount_type: item.discount_type ?? null,
+        discount_value: item.discount_value ?? 0,
+        voucher_amount: item.voucher_amount ?? 0,
       }));
 
       const { error: itemsError } = await db

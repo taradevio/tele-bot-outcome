@@ -21,32 +21,7 @@ import { getToken } from "@/lib/auth";
 const queryClient = new QueryClient();
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-interface LowConfidenceFields {
-  field: string;
-  confidence: number;
-  value: string | number | null;
-}
-interface ReceiptItem {
-  id: string;
-  name: string;
-  qty: number;
-  price: number;
-  total_price: number;
-  category: string;
-  created_at: string;
-}
-interface UserReceipts {
-  id: string;
-  store_name: string;
-  total_amount: number;
-  transaction_date: string;
-  status: "PENDING" | "ACTION_REQUIRED" | "VERIFIED";
-  low_confidence_fields: LowConfidenceFields[];
-  receipt_items: ReceiptItem[];
-}
-interface UserData {
-  receipts: UserReceipts[];
-}
+import { type UserReceipts, type UserData } from "@/types";
 
 // Mock receipt data for development
 // const mockReceipts: Receipt[] = [

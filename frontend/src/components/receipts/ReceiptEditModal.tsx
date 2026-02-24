@@ -611,11 +611,36 @@ export const ReceiptEditModal = ({
                             </span>
                           )}
                         </div>
-                        {item.category && (
-                          <span className="text-xs text-gray-500 italic">
-                            {item.category}
-                          </span>
-                        )}
+                        <div className="flex flex-col gap-0.5">
+                          {item.category && (
+                            <span className="text-[10px] text-gray-500 italic">
+                              {item.category}
+                            </span>
+                          )}
+                          <div className="text-[10px] text-gray-400 flex items-center gap-1">
+                            <span>
+                              ({item.qty} x {formattedRupiah(item.price)})
+                            </span>
+                            {(item.discount_value ?? 0) > 0 && (
+                              <>
+                                <span className="text-red-400">
+                                  -{" "}
+                                  {item.discount_type === "percentage"
+                                    ? `${item.discount_value}%`
+                                    : formattedRupiah(item.discount_value ?? 0)}
+                                </span>
+                              </>
+                            )}
+                            {(item.voucher_amount ?? 0) > 0 && (
+                              <>
+                                <span className="text-purple-400">
+                                  - {formattedRupiah(item.voucher_amount ?? 0)}{" "}
+                                  (Voucher)
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       <span className="text-white font-semibold">
                         {formattedRupiah(item.total_price)}
@@ -648,7 +673,6 @@ export const ReceiptEditModal = ({
                               const qty = Math.max(1, Number(e.target.value));
                               updateItem(idx, {
                                 qty,
-                                total_price: qty * item.price,
                               });
                             }}
                             className="text-sm h-9 px-2 text-center"
@@ -660,7 +684,7 @@ export const ReceiptEditModal = ({
                           </label>
                           <div className="relative">
                             <span className="absolute left-2 top-2 text-gray-500 text-xs">
-                              $
+                              Rp
                             </span>
                             <DarkInput
                               type="number"
@@ -669,7 +693,6 @@ export const ReceiptEditModal = ({
                                 const price = Number(e.target.value);
                                 updateItem(idx, {
                                   price,
-                                  total_price: item.qty * price,
                                 });
                               }}
                               className="text-right pl-4 text-sm h-9"
@@ -685,7 +708,57 @@ export const ReceiptEditModal = ({
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="w-full h-[0.5px] bg-gray-800/50" />
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <div>
+                          <label className="text-[10px] text-gray-500 mb-1 block">
+                            Disc. Type
+                          </label>
+                          <select
+                            value={item.discount_type || ""}
+                            onChange={(e) =>
+                              updateItem(idx, {
+                                discount_type: (e.target.value as any) || null,
+                              })
+                            }
+                            className="bg-[#0f1419] border border-gray-800 rounded-lg px-2 py-1.5 text-white text-xs w-full focus:outline-none focus:border-blue-500 transition-colors"
+                          >
+                            <option value="">None</option>
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="nominal">Nominal (Rp)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 mb-1 block">
+                            Disc. Value
+                          </label>
+                          <DarkInput
+                            type="number"
+                            value={item.discount_value || 0}
+                            onChange={(e) =>
+                              updateItem(idx, {
+                                discount_value: Number(e.target.value),
+                              })
+                            }
+                            className="text-xs h-8"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 mb-1 block">
+                            Voucher
+                          </label>
+                          <DarkInput
+                            type="number"
+                            value={item.voucher_amount || 0}
+                            onChange={(e) =>
+                              updateItem(idx, {
+                                voucher_amount: Number(e.target.value),
+                              })
+                            }
+                            className="text-xs h-8"
+                          />
+                        </div>
+                      </div>
+                      <div className="w-full h-[0.5px] bg-gray-800/50 mb-2" />
                     </>
                   )}
                 </div>
