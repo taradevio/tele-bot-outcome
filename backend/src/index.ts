@@ -286,6 +286,80 @@ app.get("/api/receipts", async (c) => {
   }
 });
 
+app.post("/api/receipts/:receipt_id", async (c) => {
+  const db = supabaseClient(c.env);
+
+  const header = c.req.header("Authorization");
+  if (!header?.startsWith("Bearer ")) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const token = header.split(" ")[1];
+  try {
+    const payload = await verify(token, c.env.JWT_SECRET, "HS256");
+
+    const user_id = payload.user_id;
+    const receipt_id = c.req.param("receipt_id");
+
+    const body = await c.req.json();
+
+    const { data: existingUser, error: errorExistingUser } = await db
+      .from("receipts")
+      .select("id")
+      .eq("id", receipt_id)
+      .eq("user_id", user_id)
+      .single();
+
+    if (errorExistingUser || !existingUser) {
+      return c.json({ error: "Receipt not found" }, 404);
+    }
+
+    const { error: receiptError } = await db
+      .from("receipts")
+      .update({
+        store_name: body.store_name,
+        total_amount: body.total_amount,
+        transaction_date: body.transaction_date,
+        status: body.status,
+        edited_fields: body.edited_fields ?? [],
+      })
+      .eq("id", receipt_id);
+
+    if (receiptError) return c.json({ error: receiptError.message }, 500);
+
+    // Update receipt items kalau ada perubahan
+    if (body.receipt_items?.length > 0) {
+      // Delete existing items dulu
+      const { error: deleteError } = await db
+        .from("receipt_items")
+        .delete()
+        .eq("receipt_id", receipt_id);
+
+      if (deleteError) return c.json({ error: deleteError.message }, 500);
+
+      // Insert items baru
+      const items = body.receipt_items.map((item: any) => ({
+        receipt_id,
+        name: item.name,
+        qty: item.qty,
+        price: item.price,
+        total_price: item.total_price,
+        category: item.category,
+      }));
+
+      const { error: itemsError } = await db
+        .from("receipt_items")
+        .insert(items);
+
+      if (itemsError) return c.json({ error: itemsError.message }, 500);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: "Invalid token" }, 401);
+  }
+});
+
 app.post("/login", async (c) => {});
 
 app.get("/charts", (c) => {
