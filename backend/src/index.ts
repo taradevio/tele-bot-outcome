@@ -106,6 +106,9 @@ app.post("/process-receipt", async (c) => {
         price: item.price,
         total_price: item.total_price,
         category: item.category,
+        discount_type: item.discount_type ?? null,
+        discount_value: item.discount_value ?? 0,
+        voucher_amount: item.voucher_amount ?? 0,
       }));
 
       // const receipt_items = payloadData.receipt;
