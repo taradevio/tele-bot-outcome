@@ -286,7 +286,7 @@ app.get("/api/receipts", async (c) => {
   }
 });
 
-app.post("/api/receipts/:receipt_id", async (c) => {
+app.put("/api/receipts/:receipt_id", async (c) => {
   const db = supabaseClient(c.env);
 
   const header = c.req.header("Authorization");

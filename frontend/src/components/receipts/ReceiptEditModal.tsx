@@ -132,7 +132,7 @@ export const ReceiptEditModal = ({
   const confirmSave = async () => {
     setIsSaving(true);
     const nextStatus =
-      editedReceipt.status === "ACTION_REQUIRED" ? "PENDING" : "VERIFIED";
+      editedReceipt.status === "ACTION_REQUIRED" ? "VERIFIED" : "VERIFIED";
     const token = await getToken();
 
     const editedFields: string[] = [];
@@ -747,11 +747,7 @@ export const ReceiptEditModal = ({
             <h3 className="text-xl font-bold text-white mb-2">Save Changes?</h3>
             <p className="text-gray-400 mb-6">
               Are you sure you want to update this receipt? This will move it to{" "}
-              <span className="text-blue-400 font-semibold">
-                {editedReceipt.status === "ACTION_REQUIRED"
-                  ? "Pending"
-                  : "Verified"}
-              </span>{" "}
+              <span className="text-green-400 font-semibold">Verified</span>{" "}
               status.
             </p>
             <div className="flex flex-col gap-3">
