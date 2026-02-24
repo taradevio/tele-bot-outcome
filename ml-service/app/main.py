@@ -98,7 +98,10 @@ async def background_refine(update, raw_text, file_path):
             "qty": item.get("qty", {}).get("value", 0),
             "price": item.get("price", {}).get("value", 0),
             "total_price": item.get("total_price", {}).get("value", 0),
-            "category": item.get("category", {}).get("value", "Others")
+            "category": item.get("category", {}).get("value", "Others"),
+            "discount_type": item.get("discount_type", {}).get("value", None),
+            "discount_value": item.get("discount_value", {}).get("value", 0),
+            "voucher_amount": item.get("voucher_amount", {}).get("value", 0),
         }
         for item in receipt_data.get("items", [])
     ]

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 custom_client = AsyncClient(
     host=os.getenv("OLLAMA_API_KEY", "http://localhost:11434"),
-    timeout=50 
+    timeout=120 
 )
 
 
@@ -179,6 +179,22 @@ async def refine_receipt(raw_text: str):
         - Jika tidak ditemukan date/time, gunakan null
         - PASTIKAN format date valid sebelum output!
     
+    5. DISCOUNT EXTRACTION:
+        a. Pattern A (per item discount):
+            - Cari "Diskon X%" atau "Disc X%" di bawah sebuah item → discount_type: "percentage", discount_value: x
+            - Cari "Diskon Rp X" atau "Disc Rp X" di bawah sebuah item → discount_type: "nominal", discount_value: x
+            - Cari "Voucher Rp X" atau "Vouc Rp X" di bawah sebuah item → voucher_amount: x
+            - Hubungkan diskon/voucher dengan item DI ATASNYA
+        b. Pattern B (summary discount):
+            - Jika diskon muncul di bagian summary (e. g "Total Diskon", "Total Disc", "Total Voucher", atau "Total Vouc" )
+            - Distribusikan secara proporsional ke seluruh item berdasarkan rasio harga item
+        c. Apabila tidak ada diskon/voucher untuk sebuah item:
+            - discount_type: null,
+            - discount_value: 0,
+            - voucher_amount: 0
+        d. total_price per item seharusnya sudah termasuk diskon dan voucher:
+            - total_price = (qty * price) - discount_amount - voucher_amount
+    
     5. CONFIDENCE SCORING:
         - Berikan confidence score (0.0 - 1.0) untuk setiap field
         - 0.9-1.0: Teks jelas, tidak ambigu
@@ -206,7 +222,10 @@ async def refine_receipt(raw_text: str):
         "qty": {{"value": int, "confidence": float}},
         "price": {{"value": int, "confidence": float}},
         "total_price": {{"value": int, "confidence": float}},
-        "category": {{"value": "string", "confidence": float}}
+        "category": {{"value": "string", "confidence": float}},
+        "discount_type": {{"value": "percentage" | "nominal" | "null", "confidence": float}}.
+        "discount_value": {{"value": int, "confidence": float}},
+        "voucher_amount": {{"value": int, "confidence": float}}
         }}
       ],
       "total_amount": {{"value": int, "confidence": float}}
@@ -223,10 +242,10 @@ async def refine_receipt(raw_text: str):
                 prompt=prompt,
                 format="json",
                 options={
-                    "temperature": 0.3,
+                    "temperature": 0.1,
                     # "num_predict": 600,
                     "top_k": 20,
-                    "top_p": 0.6,
+                    "top_p": 0.7,
                 }
 
             )
@@ -244,7 +263,7 @@ async def refine_receipt(raw_text: str):
                 "receipt_data": response_data,
                 "status": scoring["status"],
                 "low_confidence_fields": scoring["low_confidence_fields"],
-                "requires_review": scoring["requires_review"]
+                "requires_review": scoring["requires_review"],
             }
 
         except:
