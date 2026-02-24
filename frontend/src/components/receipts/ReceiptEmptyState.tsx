@@ -21,7 +21,7 @@ export const ReceiptEmptyState = ({
       <h3 className="text-lg font-semibold text-gray-200 mb-2">
         {isNoResults ? "No receipts found" : "No receipts yet"}
       </h3>
-      <p className="text-sm text-gray-400 max-w-[260px]">
+      <p className="text-sm text-gray-400 max-w-65">
         {isNoResults
           ? "Try adjusting your search or filters to find what you're looking for."
           : "Upload a receipt photo via the Telegram bot and it will appear here for review."}
