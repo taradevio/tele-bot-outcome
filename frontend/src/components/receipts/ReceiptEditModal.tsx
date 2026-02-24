@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import type { UserReceipts, ReceiptItem } from "@/types";
+import { calculateTotal } from "@/utils/calculateDicountVoucher";
 import { getToken } from "@/lib/auth";
 import {
   X,
@@ -210,11 +211,13 @@ export const ReceiptEditModal = ({
 
   const updateItem = (idx: number, updates: Partial<ReceiptItem>) => {
     const newItems = [...editedReceipt.receipt_items];
-    newItems[idx] = { ...newItems[idx], ...updates };
-    setEditedReceipt({
-      ...editedReceipt,
-      receipt_items: newItems,
-    });
+    const updated = { ...newItems[idx], ...updates };
+
+    // Auto-recalculate total_price
+    updated.total_price = calculateTotal(updated);
+
+    newItems[idx] = updated;
+    setEditedReceipt({ ...editedReceipt, receipt_items: newItems });
   };
 
   return (
