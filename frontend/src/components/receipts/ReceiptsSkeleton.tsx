@@ -16,7 +16,7 @@ export const ReceiptsSkeleton = () => {
       <div className="px-4 pb-4">
         <div className="relative flex items-center">
           <Search className="absolute left-3 h-4 w-4 text-gray-700" />
-          <Skeleton className="w-full h-[52px] rounded-xl bg-[#1a2129]" />
+          <Skeleton className="w-full h-13 rounded-xl bg-[#1a2129]" />
         </div>
       </div>
 
@@ -50,7 +50,7 @@ export const ReceiptsSkeleton = () => {
           {[1, 2].map((i) => (
             <Card
               key={i}
-              className="bg-[#1a2129] border-none rounded-2xl min-w-[280px] max-w-[280px] shrink-0"
+              className="bg-[#1a2129] border-none rounded-2xl min-w-70 max-w-70 shrink-0"
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3 mb-3">
