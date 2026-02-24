@@ -122,7 +122,14 @@ export const ReceiptEditModal = ({
 
   const handleSave = async () => {
   const nextStatus = editedReceipt.status === "ACTION_REQUIRED" ? "PENDING" : "VERIFIED";
-  const token = await getToken()
+  const token = await getToken();
+
+  const editedFields: string[] = [];
+  if (editedReceipt.store_name !== receipt.store_name) editedFields.push("store_name");
+  if (editedReceipt.total_amount !== receipt.total_amount) editedFields.push("total_amount");
+  if (editedReceipt.transaction_date !== receipt.transaction_date) editedFields.push("transaction_date");
+  if (JSON.stringify(editedReceipt.receipt_items) !== JSON.stringify(receipt.receipt_items)) editedFields.push("items");
+
   
   // Hit BE buat update receipt
   const res = await fetch(`${BACKEND_URL}/api/receipts/${editedReceipt.id}`, {
@@ -134,6 +141,7 @@ export const ReceiptEditModal = ({
     body: JSON.stringify({
       ...editedReceipt,
       status: nextStatus,
+      edited_fields: editedFields
     })
   });
 
