@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { useNavigate } from "@tanstack/react-router";
 import type { UserReceipts, ReceiptItem } from "@/types";
 import { getToken } from "@/lib/auth";
 import {
@@ -58,6 +60,9 @@ export const ReceiptEditModal = ({
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const navigate = useNavigate();
   // const [showFullImage, setShowFullImage] = useState(false);
 
   // Initialize state when receipt changes
@@ -120,36 +125,63 @@ export const ReceiptEditModal = ({
   //   onClose();
   // };
 
-  const handleSave = async () => {
-  const nextStatus = editedReceipt.status === "ACTION_REQUIRED" ? "PENDING" : "VERIFIED";
-  const token = await getToken();
+  const handleSave = () => {
+    setIsConfirmModalOpen(true);
+  };
 
-  const editedFields: string[] = [];
-  if (editedReceipt.store_name !== receipt.store_name) editedFields.push("store_name");
-  if (editedReceipt.total_amount !== receipt.total_amount) editedFields.push("total_amount");
-  if (editedReceipt.transaction_date !== receipt.transaction_date) editedFields.push("transaction_date");
-  if (JSON.stringify(editedReceipt.receipt_items) !== JSON.stringify(receipt.receipt_items)) editedFields.push("items");
+  const confirmSave = async () => {
+    setIsSaving(true);
+    const nextStatus =
+      editedReceipt.status === "ACTION_REQUIRED" ? "PENDING" : "VERIFIED";
+    const token = await getToken();
 
-  
-  // Hit BE buat update receipt
-  const res = await fetch(`${BACKEND_URL}/api/receipts/${editedReceipt.id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      ...editedReceipt,
-      status: nextStatus,
-      edited_fields: editedFields
-    })
-  });
+    const editedFields: string[] = [];
+    if (editedReceipt.store_name !== receipt.store_name)
+      editedFields.push("store_name");
+    if (editedReceipt.total_amount !== receipt.total_amount)
+      editedFields.push("total_amount");
+    if (editedReceipt.transaction_date !== receipt.transaction_date)
+      editedFields.push("transaction_date");
+    if (
+      JSON.stringify(editedReceipt.receipt_items) !==
+      JSON.stringify(receipt.receipt_items)
+    )
+      editedFields.push("items");
 
-  if (!res.ok) return; // handle error
-  
-  onSave(); // trigger refetch di parent
-  onClose();
-};
+    try {
+      // Hit BE buat update receipt
+      const res = await fetch(
+        `${BACKEND_URL}/api/receipts/${editedReceipt.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            ...editedReceipt,
+            status: nextStatus,
+            edited_fields: editedFields,
+          }),
+        },
+      );
+
+      if (!res.ok) throw new Error(`Error: ${res.status}`);
+
+      toast.success("Receipt updated successfully");
+      onSave(); // trigger refetch di parent
+      onClose();
+      setIsConfirmModalOpen(false);
+
+      // Redirect back to receipts page
+      navigate({ to: "/receipts" });
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update receipt");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleAddItem = () => {
     const newItem: ReceiptItem = {
@@ -708,6 +740,40 @@ export const ReceiptEditModal = ({
           </>
         )}
       </div>
+      {/* Confirmation Modal Overlay */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#1a2129] border border-gray-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-white mb-2">Save Changes?</h3>
+            <p className="text-gray-400 mb-6">
+              Are you sure you want to update this receipt? This will move it to{" "}
+              <span className="text-blue-400 font-semibold">
+                {editedReceipt.status === "ACTION_REQUIRED"
+                  ? "Pending"
+                  : "Verified"}
+              </span>{" "}
+              status.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-12 font-bold"
+                onClick={confirmSave}
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Yes, Save Changes"}
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full text-gray-400 hover:text-white"
+                onClick={() => setIsConfirmModalOpen(false)}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
