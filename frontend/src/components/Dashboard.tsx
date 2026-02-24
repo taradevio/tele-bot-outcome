@@ -199,7 +199,7 @@ const UserDashboard = () => {
   const [telegramUserProfile, setTelegramUserProfile] =
     useState<TelegramUser | null>(null);
   const [photoUrl, SetPhotoUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
   const [focusedData, setFocusedData] = useState<{
     week: string;
     spending: number | null;
@@ -208,10 +208,10 @@ const UserDashboard = () => {
   } | null>(null);
 
   // Simulate data loading
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
+  // useEffect(() => {
+  //   const timer = setTimeout(() => setIsLoading(false), 2000);
+  //   return () => clearTimeout(timer);
+  // }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -253,7 +253,7 @@ const UserDashboard = () => {
     fetchData();
   }, []);
 
-  const { data, error } = useQuery({
+  const { data, error, isLoading } = useQuery({
     queryKey: ["userReceipts", userReceipts],
     queryFn: async () => {
       const res = await fetch(`${BACKEND_URL}/api/user-data`, {
