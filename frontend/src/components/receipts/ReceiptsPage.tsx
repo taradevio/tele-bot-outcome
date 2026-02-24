@@ -178,7 +178,9 @@ const Receipts = () => {
   // });
 
   // Edit Modal State
-  const [selectedReceipt, setSelectedReceipt] = useState<UserReceipts | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<UserReceipts | null>(
+    null,
+  );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Initial fetch/sync
@@ -263,7 +265,7 @@ const Receipts = () => {
 
       // Status filter
       if (filterValues.status) {
-        if ((receipt.status || "verified") !== filterValues.status)
+        if ((receipt.status || "VERIFIED") !== filterValues.status)
           return false;
       }
 

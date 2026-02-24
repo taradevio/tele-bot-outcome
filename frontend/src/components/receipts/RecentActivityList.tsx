@@ -132,9 +132,13 @@ export const RecentActivityList = ({
               {items.map((receipt) => {
                 const date = new Date(receipt.transaction_date);
                 const timeLabel = date.toLocaleTimeString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
                   hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
+                  minute: "numeric",
+                  hour12: false,
                 });
 
                 const status = receipt.status || "VERIFIED";
