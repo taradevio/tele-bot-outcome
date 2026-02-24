@@ -6,6 +6,9 @@ export interface ReceiptItem {
   total_price: number;
   category: string;
   created_at: string;
+  discount_type?: "percentage" | "nominal" | null;
+  discount_value?: number;
+  voucher_amount?: number;
 }
 
 interface LowConfidenceFields {
