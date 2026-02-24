@@ -10,21 +10,7 @@ import { setToken } from "@/lib/auth";
 // import { transformCategoryData } from "@/utils/categoryHelpers";
 
 // import { useQuery } from "@tanstack/react-query";
-import {
-  Bell,
-  Search,
-  //   SlidersHorizontal,
-  TrendingUp,
-  // ArrowUp,
-  // ArrowDown,
-  ArrowUpDown,
-  Upload,
-  // House,
-  // Receipt,
-  // ChartPie,
-  // User,
-  X,
-} from "lucide-react";
+import { Bell, Search, TrendingUp, X } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -788,7 +774,7 @@ const UserDashboard = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons
       <div className="px-4 pb-6 flex gap-3">
         <Button
           variant="outline"
@@ -801,7 +787,7 @@ const UserDashboard = () => {
           <Upload className="h-5 w-5 mr-2" />
           Export Data
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 };

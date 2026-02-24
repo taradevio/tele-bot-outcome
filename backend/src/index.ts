@@ -366,6 +366,57 @@ app.put("/api/receipts/:receipt_id", async (c) => {
   }
 });
 
+app.delete("/api/receipts/:receipt_id", async (c) => {
+  const db = supabaseClient(c.env);
+
+  const header = c.req.header("Authorization");
+  if (!header?.startsWith("Bearer ")) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const token = header.split(" ")[1];
+  try {
+    const payload = await verify(token, c.env.JWT_SECRET, "HS256");
+
+    const user_id = payload.user_id;
+    const receipt_id = c.req.param("receipt_id");
+
+    // Check ownership
+    const { data: existingReceipt, error: errorExisting } = await db
+      .from("receipts")
+      .select("id")
+      .eq("id", receipt_id)
+      .eq("user_id", user_id)
+      .single();
+
+    if (errorExisting || !existingReceipt) {
+      return c.json({ error: "Receipt not found or access denied" }, 404);
+    }
+
+    // Delete items first (foreign key constraint)
+    const { error: deleteItemsError } = await db
+      .from("receipt_items")
+      .delete()
+      .eq("receipt_id", receipt_id);
+
+    if (deleteItemsError)
+      return c.json({ error: deleteItemsError.message }, 500);
+
+    // Delete receipt
+    const { error: deleteReceiptError } = await db
+      .from("receipts")
+      .delete()
+      .eq("id", receipt_id);
+
+    if (deleteReceiptError)
+      return c.json({ error: deleteReceiptError.message }, 500);
+
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: "Invalid token" }, 401);
+  }
+});
+
 app.post("/login", async (c) => {});
 
 app.get("/charts", (c) => {

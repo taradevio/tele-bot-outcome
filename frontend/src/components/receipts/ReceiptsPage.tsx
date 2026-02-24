@@ -417,8 +417,9 @@ const Receipts = () => {
       </div>
 
       {/* Edit Modal */}
-      {selectedReceipt && (
+      {selectedReceipt && isEditModalOpen && (
         <ReceiptEditModal
+          key={selectedReceipt.id}
           receipt={selectedReceipt}
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}

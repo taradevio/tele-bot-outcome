@@ -169,6 +169,8 @@ async def refine_receipt(raw_text: str):
         - "KEMBALI" = kembalian (bukan total belanja)
         - TOTAL yang benar adalah jumlah yang harus dibayar untuk barang, BUKAN uang yang diterima kasir
         - Dalam contoh: TOTAL=8.000, JUMLAH UANG=10.000, KEMBALI=2.000 → total_amount=8000
+        
+        # must explicitl mention that indonesian date are mostly d/m/y
     4. DATE & TIME - EKSTRAKSI TELITI:
         - Cari pattern: Tgl, Tanggal, Date, TGL, tgl
         - Format input bisa: DD/MM/YYYY, DD-MM-YYYY, YYYY/MM/DD, atau tulisan bulan (Januari, Jan, January)

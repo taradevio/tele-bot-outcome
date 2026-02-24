@@ -1,8 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import type { UserReceipts, ReceiptItem } from "@/types";
-import { calculateTotal } from "@/utils/calculateDicountVoucher";
+import {
+  calculateTotal,
+  calculateReceiptSummary,
+} from "@/utils/calculateDicountVoucher";
 import { getToken } from "@/lib/auth";
 import {
   X,
@@ -20,7 +25,6 @@ import {
   MoreVertical,
   ShoppingBag,
   GitMerge,
-  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
@@ -62,24 +66,54 @@ export const ReceiptEditModal = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // const [isDeleting, setIsDeleting] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      const res = await fetch(
+        `${BACKEND_URL}/api/receipts/${editedReceipt.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      if (!res.ok) throw new Error(`Error: ${res.status}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Receipt deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["userReceipts"] });
+      onSave(); // trigger refetch di parent
+      onClose();
+      setIsDeleteConfirmOpen(false);
+      navigate({ to: "/receipts" });
+    },
+    onError: (err) => {
+      console.error(err);
+      toast.error("Failed to delete receipt");
+    },
+  });
+
   // const [showFullImage, setShowFullImage] = useState(false);
 
-  // Initialize state when receipt changes
-  useEffect(() => {
-    setEditedReceipt(receipt);
-  }, [receipt]);
+  // State is now initialized once on mount
+  // Parent uses key={receipt.id} to handle receipt changes
 
   if (!isOpen) return null;
 
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.5, 3));
   const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.5, 1));
 
-  const itemsTotal = editedReceipt.receipt_items.reduce(
-    (sum, item) => sum + item.total_price,
-    0,
-  );
+  const summary = calculateReceiptSummary(editedReceipt.receipt_items);
+  const itemsTotal = summary.total;
 
   const totalMismatch = Math.abs(itemsTotal - editedReceipt.total_amount) > 100; // Allow small rounding diff
 
@@ -235,15 +269,33 @@ export const ReceiptEditModal = ({
         <span className="text-lg font-semibold text-white">
           {isReadOnly ? "Receipt Details" : "Verify Receipt"}
         </span>
-        <div className="flex gap-2">
+        <div className="flex gap-2 relative">
           {isReadOnly && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-gray-400 hover:text-white"
-            >
-              <MoreVertical className="h-5 w-5" />
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-gray-400 hover:text-white"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+
+              {isMenuOpen && (
+                <div className="absolute right-0 top-12 w-48 bg-[#1a2129] border border-gray-800 rounded-xl shadow-2xl z-20 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setIsDeleteConfirmOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-500/10 transition-colors text-sm font-medium"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Receipt
+                  </button>
+                </div>
+              )}
+            </>
           )}
           {!isReadOnly && <div className="w-10" />}
         </div>
@@ -493,54 +545,11 @@ export const ReceiptEditModal = ({
                         <Maximize2 className="absolute right-3 top-3 h-4 w-4 text-blue-500" />
                       </div>
                     </div>
-
-                    {/* Tax */}
-                    <div>
-                      <label className="text-gray-400 text-sm mb-1.5 block">
-                        Tax
-                      </label>
-                      {/* <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-gray-400">
-                          $
-                        </span>
-                        <DarkInput
-                          value={editedReceipt.tax || 0}
-                          onChange={(e) =>
-                            setEditedReceipt({
-                              ...editedReceipt,
-                              tax: Number(e.target.value),
-                            })
-                          }
-                          className="pl-6"
-                        />
-                      </div> */}
-                    </div>
                   </div>
                 </>
               ) : (
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="bg-[#1a2129] p-4 rounded-2xl border border-gray-800/50">
-                    <p className="text-xs text-gray-500 font-bold mb-1">
-                      TOTAL AMOUNT
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xl font-black text-white">
-                        {formattedRupiah(receipt.total_amount)}
-                      </p>
-                      {receipt.status === "PENDING" &&
-                        receipt.edited_fields?.includes("total_amount") && (
-                          <span className="text-[9px] text-blue-400 font-bold">
-                            (Edited)
-                          </span>
-                        )}
-                    </div>
-                  </div>
-                  {/* <div className="bg-[#1a2129] p-4 rounded-2xl border border-gray-800/50">
-                    <p className="text-xs text-gray-500 font-bold mb-1">TAX</p>
-                    <p className="text-xl font-bold text-gray-300">
-                      {formattedRupiah(receipt.tax || 0)}
-                    </p>
-                  </div> */}
+                <div className="pt-2">
+                  {/* Total Amount card removed from here as it's now in the summary below items */}
                 </div>
               )}
             </div>
@@ -765,6 +774,47 @@ export const ReceiptEditModal = ({
               ))}
             </div>
 
+            {/* Receipt Summary Section */}
+            <div className="mt-8 space-y-3 border-t border-dashed border-gray-800 pt-6 px-1">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Subtotal</span>
+                <span className="text-white font-medium">
+                  {formattedRupiah(summary.subtotal)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Total Diskon</span>
+                <span className="text-red-400 font-medium">
+                  -{formattedRupiah(summary.discount)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Total Voucher</span>
+                <span className="text-purple-400 font-medium">
+                  -{formattedRupiah(summary.voucher)}
+                </span>
+              </div>
+
+              <div className="pt-4 border-t border-gray-800/50 mt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-white uppercase tracking-tight">
+                    Total
+                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-xl font-black text-white">
+                      {formattedRupiah(itemsTotal)}
+                    </span>
+                    {receipt.status === "PENDING" &&
+                      receipt.edited_fields?.includes("total_amount") && (
+                        <span className="text-[10px] text-blue-400 font-bold mt-0.5">
+                          (Edited)
+                        </span>
+                      )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {!isReadOnly && totalMismatch && (
               <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between">
                 <span className="text-gray-400 text-sm">Sum of items</span>
@@ -790,15 +840,7 @@ export const ReceiptEditModal = ({
       {/* Footer Actions */}
       <div className="p-4 bg-[#0f1419] border-t border-gray-800 shrink-0 mb-4 space-y-3">
         {isReadOnly ? (
-          <>
-            <Button
-              variant="outline"
-              className="w-full bg-transparent border-gray-800 text-white rounded-xl h-14 text-lg font-bold"
-            >
-              <Share2 className="mr-2 h-5 w-5" />
-              Export to PDF
-            </Button>
-          </>
+          <div className="w-full" />
         ) : (
           <>
             <Button
@@ -839,6 +881,40 @@ export const ReceiptEditModal = ({
                 className="w-full text-gray-400 hover:text-white"
                 onClick={() => setIsConfirmModalOpen(false)}
                 disabled={isSaving}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#1a2129] border border-gray-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-red-500/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="h-8 w-8 text-red-500" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2 text-center">
+              Delete Receipt?
+            </h3>
+            <p className="text-gray-400 mb-6 text-center">
+              This action cannot be undone. This receipt will be permanently
+              removed.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl h-12 font-bold"
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Yes, Delete It"}
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full text-gray-400 hover:text-white font-medium"
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                disabled={deleteMutation.isPending}
               >
                 Cancel
               </Button>
