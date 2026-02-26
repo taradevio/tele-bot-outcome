@@ -195,27 +195,28 @@ async def lifespan(app: FastAPI):
         connect_timeout=60.0,
         read_timeout=60.0
     )
-    ocr_app = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).request(request_config).build()
+    ocr_app = Application.builder().token(TELEGRAM_BOT_TOKEN).request(request_config).build()
     ocr_app.add_handler(CommandHandler("start", start_command))
     ocr_app.add_handler(MessageHandler(filters.PHOTO, handle_receipt_photo))
 
     await ocr_app.initialize()
+    
+    if WEBHOOK_SECRET:
+        webhook_url = f"{WEBHOOK_SECRET}/webhook/{WEBHOOK_SECRET}"
+        await ocr_app.bot.set_webhook(url=webhook_url)
+        logger.info(f"Webhook set to: {webhook_url}")
+    else:
+        logger.warning("WEBHOOK_SECRET not set. Webhook will not be registered.")
+
     await ocr_app.start()
-    await ocr_app.updater.start_polling()
+    # await ocr_app.updater.start_polling()
     # await ocr_app.run_polling()
-    # await ocr_app.run_webhook(
-    #     listen="0.0.0.0",
-    #     port=8443,
-    #     webhook_url=f"https://{os.getenv('WEBHOOK_HOST')}/webhook/{WEBHOOK_SECRET}",
-
-
-
+    
     app.state.ocr_app = ocr_app
     logger.info("Telegram bot started.")
 
     yield
 
-    await ocr_app.updater.stop()
     await ocr_app.stop()
     await ocr_app.shutdown()
 
@@ -226,15 +227,15 @@ async def root():
     return {"message": "OCR Telegram Bot is running."}
 
 
-# @app.post("webhook/{WEBHOOK_SECRET}")
-# async def telegram_webhook(request: Request, WEBHOOK_SECRET: str, context: ContextTypes.DEFAULT_TYPE):
-#     if WEBHOOK_SECRET != os.getvenv("WEBHOOK_SECRET"):
-#         return {"status": "Unauthorized", "error": "Invalid webhook secret"}, 401
+@app.post("/webhook/{webhook_secret}")
+async def telegram_webhook(request: Request, webhook_secret: str):
+    if webhook_secret != WEBHOOK_SECRET:
+        return {"status": "Unauthorized", "error": "Invalid webhook secret"}, 401
     
-#     data = await request.json()
-#     update = Update.de_json(data, context.bot)
-#     await handle_update(update, context)
-#     return {"status": "success"}
+    data = await request.json()
+    update = Update.de_json(data, app.state.ocr_app.bot)
+    await app.state.ocr_app.process_update(update)
+    return {"status": "success"}
 
 
 # we'll use below when requests coming from backend

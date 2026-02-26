@@ -161,6 +161,7 @@ async def refine_receipt(raw_text: str):
     {category_examples}
 
     INSTRUKSI KHUSUS:
+    # must capture the correct store name
     1. MERCHANT_NAME: Ambil dari baris yang menyatakan nama toko atau nama PT yang tertera.
     2. CURRENCY: Hapus semua titik/koma pemisah ribuan. Pastikan total_amount adalah INTEGER.
     3. TOTAL_AMOUNT: 
@@ -170,7 +171,7 @@ async def refine_receipt(raw_text: str):
         - TOTAL yang benar adalah jumlah yang harus dibayar untuk barang, BUKAN uang yang diterima kasir
         - Dalam contoh: TOTAL=8.000, JUMLAH UANG=10.000, KEMBALI=2.000 → total_amount=8000
         
-        # must explicitl mention that indonesian date are mostly d/m/y
+        # must explicitly mention that indonesian date are mostly d/m/y
     4. DATE & TIME - EKSTRAKSI TELITI:
         - Cari pattern: Tgl, Tanggal, Date, TGL, tgl
         - Format input bisa: DD/MM/YYYY, DD-MM-YYYY, YYYY/MM/DD, atau tulisan bulan (Januari, Jan, January)
