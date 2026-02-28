@@ -240,10 +240,11 @@ async def root():
 #     return {"status": "success"}
 
 @app.post("/webhook")
-async def webhook(request: Request):
+async def webhook(request: Request, background_tasks: BackgroundTasks):
     ocr_app = request.app.state.ocr_app
     data = await request.json()
     update = Update.de_json(data, ocr_app.bot)
+    background_tasks.add_task(ocr_app.process_update, update)
     await ocr_app.process_update(update)
     return {"ok": True}
 
