@@ -245,7 +245,6 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
     data = await request.json()
     update = Update.de_json(data, ocr_app.bot)
     background_tasks.add_task(ocr_app.process_update, update)
-    await ocr_app.process_update(update)
     return {"ok": True}
 
 # we'll use below when requests coming from backend
