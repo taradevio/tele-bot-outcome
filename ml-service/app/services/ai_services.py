@@ -9,7 +9,8 @@ from ollama import AsyncClient
 logger = logging.getLogger(__name__)
 
 custom_client = AsyncClient(
-    host=os.getenv("OLLAMA_API_KEY", "http://localhost:11434"),
+    host=os.getenv("https://ollama.com"),
+    headers={"Authorization": f"Bearer {os.getenv('OLLAMA_API_KEY')}"},
     timeout=120 
 )
 
