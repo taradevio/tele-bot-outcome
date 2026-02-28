@@ -17,7 +17,7 @@ from app.services.ai_services import refine_receipt
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 BACKEND_URL = os.getenv("BACKEND_URL_PROD")
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -174,10 +174,12 @@ async def background_refine(update, raw_text, file_path):
             f"💰 *TOTAL AMOUNT:* *Rp {total_amount:,}*\n"
         )
 
-    if not receipt_data:
-        await update.message.reply_text("Make sure the image is clear")
-        
-    await update.message.reply_text(caption, parse_mode='Markdown')
+    try:
+        await update.message.reply_text(caption, parse_mode='Markdown')
+
+    except Exception as e:
+        if not receipt_data:
+            await update.message.reply_text("Make sure the image is clear")
     
     if os.path.exists(file_path):
         os.remove(file_path)
@@ -200,15 +202,14 @@ async def lifespan(app: FastAPI):
     ocr_app.add_handler(MessageHandler(filters.PHOTO, handle_receipt_photo))
 
     await ocr_app.initialize()
+    await ocr_app.start()
     
-    if WEBHOOK_SECRET:
-        webhook_url = f"{WEBHOOK_SECRET}/webhook/{WEBHOOK_SECRET}"
-        await ocr_app.bot.set_webhook(url=webhook_url)
-        logger.info(f"Webhook set to: {webhook_url}")
+    if WEBHOOK_URL:
+        await ocr_app.bot.set_webhook(url=f"{WEBHOOK_URL}/webhook", allowed_updates=["message"])
+        logger.info(f"Webhook set to: {WEBHOOK_URL}")
     else:
         logger.warning("WEBHOOK_SECRET not set. Webhook will not be registered.")
 
-    await ocr_app.start()
     # await ocr_app.updater.start_polling()
     # await ocr_app.run_polling()
     
@@ -216,7 +217,8 @@ async def lifespan(app: FastAPI):
     logger.info("Telegram bot started.")
 
     yield
-
+    await ocr_app.bot.delete_webhook()
+    # await ocr_app.updater.stop()
     await ocr_app.stop()
     await ocr_app.shutdown()
 
@@ -227,16 +229,23 @@ async def root():
     return {"message": "OCR Telegram Bot is running."}
 
 
-@app.post("/webhook/{webhook_secret}")
-async def telegram_webhook(request: Request, webhook_secret: str):
-    if webhook_secret != WEBHOOK_SECRET:
-        return {"status": "Unauthorized", "error": "Invalid webhook secret"}, 401
+# @app.post("/webhook/{webhook_secret}")
+# async def telegram_webhook(request: Request, webhook_secret: str):
+#     if webhook_secret != WEBHOOK_SECRET:
+#         return {"status": "Unauthorized", "error": "Invalid webhook secret"}, 401
     
-    data = await request.json()
-    update = Update.de_json(data, app.state.ocr_app.bot)
-    await app.state.ocr_app.process_update(update)
-    return {"status": "success"}
+#     data = await request.json()
+#     update = Update.de_json(data, app.state.ocr_app.bot)
+#     await app.state.ocr_app.process_update(update)
+#     return {"status": "success"}
 
+@app.post("/webhook")
+async def webhook(request: Request):
+    ocr_app = request.app.state.ocr_app
+    data = await request.json()
+    update = Update.de_json(data, ocr_app.bot)
+    await ocr_app.process_update(update)
+    return {"ok": True}
 
 # we'll use below when requests coming from backend
 # @app.post("/process-receipt")

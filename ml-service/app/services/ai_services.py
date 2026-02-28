@@ -162,7 +162,7 @@ async def refine_receipt(raw_text: str):
 
     INSTRUKSI KHUSUS:
     # must capture the correct store name
-    1. MERCHANT_NAME: Ambil dari baris yang menyatakan nama toko atau nama PT yang tertera.
+    1. MERCHANT_NAME: Ambil dari baris yang menyatakan nama toko atau nama brand
     2. CURRENCY: Hapus semua titik/koma pemisah ribuan. Pastikan total_amount adalah INTEGER.
     3. TOTAL_AMOUNT: 
         - Cari kata "TOTAL", "T O T A L", atau "SUBTOTAL" (bukan "JUMLAH UANG" atau "KEMBALI")
@@ -174,9 +174,9 @@ async def refine_receipt(raw_text: str):
         # must explicitly mention that indonesian date are mostly d/m/y
     4. DATE & TIME - EKSTRAKSI TELITI:
         - Cari pattern: Tgl, Tanggal, Date, TGL, tgl
-        - Format input bisa: DD/MM/YYYY, DD-MM-YYYY, YYYY/MM/DD, atau tulisan bulan (Januari, Jan, January)
+        - Format input: DD/MM/YYYY, DD-MM-YYYY, atau tulisan bulan (Januari, Jan, January)
         - Konversi SELALU ke YYYY-MM-DD (ISO 8601)
-        - Contoh: "12/02/2026" → "2026-02-12", "02-Jan-2026" → "2026-01-02"
+        - Contoh: "12/02/2026" → "02-Jan-2026"
         - TIME: Cari "Jam", "Time", "Waktu", atau format HH:MM
         - Contoh: "Jam :10:57" → "10:57", "10.57" → "10:57"
         - Jika tidak ditemukan date/time, gunakan null
@@ -241,14 +241,14 @@ async def refine_receipt(raw_text: str):
         logger.info(f"Sending prompt to Ollama for LLM processing for receipt ID: {receipt_id}")
 
         response = await custom_client.generate(
-                model="gpt-oss:20b-cloud",
+                model="gpt-oss:120b-cloud",
                 prompt=prompt,
                 format="json",
                 options={
                     "temperature": 0.1,
                     # "num_predict": 600,
                     "top_k": 20,
-                    "top_p": 0.7,
+                    "top_p": 0.6,
                 }
 
             )
