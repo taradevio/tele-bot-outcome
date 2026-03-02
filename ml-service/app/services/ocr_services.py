@@ -5,7 +5,7 @@ import asyncio
 import logging
 
 logger = logging.getLogger(__name__)
-engine = RapidOCR(engine="default_rapidocr.yaml")
+engine = RapidOCR(config_path="default_rapidocr.yaml")
 
 
 # def process(image_path: str) -> str:
