@@ -107,7 +107,7 @@ def determine_receipt_status(response_data: dict, thresholds: dict = None) -> di
         if field in response_data:
             confidence = response_data[field].get("confidence", 0)
             threshold = thresholds.get(field, 0.8)
-            if confidence <= threshold:
+            if confidence < threshold:
                 low_confidence_fields.append({
                     "field": field,
                     "confidence": confidence,
@@ -119,7 +119,7 @@ def determine_receipt_status(response_data: dict, thresholds: dict = None) -> di
         for field in ["name", "price", "qty"]:
             if field in item:
                 confidence = item[field].get("confidence", 0)
-                if confidence <= thresholds.get("items", 0.70):
+                if confidence < thresholds.get("items", 0.70):
                     low_confidence_fields.append({
                         "field": f"items[{i}].{field}",
                         "confidence": confidence,
