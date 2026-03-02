@@ -228,17 +228,6 @@ app = FastAPI(lifespan=lifespan)
 async def root():
     return {"message": "OCR Telegram Bot is running."}
 
-
-# @app.post("/webhook/{webhook_secret}")
-# async def telegram_webhook(request: Request, webhook_secret: str):
-#     if webhook_secret != WEBHOOK_SECRET:
-#         return {"status": "Unauthorized", "error": "Invalid webhook secret"}, 401
-    
-#     data = await request.json()
-#     update = Update.de_json(data, app.state.ocr_app.bot)
-#     await app.state.ocr_app.process_update(update)
-#     return {"status": "success"}
-
 @app.post("/webhook")
 async def webhook(request: Request, background_tasks: BackgroundTasks):
     ocr_app = request.app.state.ocr_app
