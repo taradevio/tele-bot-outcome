@@ -1,5 +1,5 @@
 Global:
-    text_score: 0.5
+    text_score: 0.7
 
     use_det: true
     use_cls: true
@@ -85,7 +85,7 @@ EngineConfig:
 
 Det:
     engine_type: "onnxruntime"
-    lang_type: "ch"
+    lang_type: "multi"
     model_type: "mobile"
     ocr_version: "PP-OCRv4"
 
