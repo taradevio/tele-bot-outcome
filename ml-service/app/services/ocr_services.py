@@ -5,7 +5,7 @@ import asyncio
 import logging
 
 logger = logging.getLogger(__name__)
-engine = RapidOCR()
+engine = RapidOCR(engine="default_rapidocr.yaml")
 
 
 # def process(image_path: str) -> str:
@@ -113,14 +113,8 @@ async def ocr_image(image_path: str) -> str:
         def process():
             img = cv2.imread(image_path)
             if img is None: return ""
-            h, w = img.shape[:2]
-            if h < 100 or w < 100:
-                logger.warning("Image too small for OCR")
-                return ""
             # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             gray = img[:, :, 1]
-            if h < 1000:
-                gray = cv2.resize(gray, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
             # bright = cv2.convertScaleAbs(gray, alpha=1.4, beta=40)
             denoised = cv2.fastNlMeansDenoising(gray, h=10)
             clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
