@@ -141,11 +141,6 @@ async def ocr_image(image_path: str) -> str:
         logger.info(f"Starting OCR processing for image: {image_path}")
         raw_text = await loop.run_in_executor(None, process)
 
-        # print("--- RAW OCR START ---")
-        # print(raw_text)
-        # print("--- RAW OCR END ---")
-        # logging.info(f"Raw OCR Output: {raw_text}")
-
         return raw_text
     except Exception as e:
         logger.error(f"OCR failed for image {image_path}: {e}")
