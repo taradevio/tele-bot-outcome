@@ -108,7 +108,7 @@ Det:
 
 Cls:
     engine_type: "onnxruntime"
-    lang_type: "multi"
+    lang_type: "ch"
     model_type: "mobile"
     ocr_version: "PP-OCRv4"
 
