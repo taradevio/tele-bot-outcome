@@ -10,15 +10,18 @@ interface CategoryData {
 }
 
 const CATEGORY_CONFIG: Record<string, { color: string; icon: string }> = {
-  "Food": { color: "bg-orange-500", icon: "🍔" },
-  "Transport": { color: "bg-blue-500", icon: "🚗" },
-  "Shopping": { color: "bg-pink-500", icon: "🛍️" },
+  "Food & Beverage": { color: "bg-orange-500", icon: "🍔" },
+  Shopping: { color: "bg-pink-500", icon: "🛍️" },
+  Transport: { color: "bg-blue-500", icon: "🚗" },
   "Bills & Utilities": { color: "bg-green-500", icon: "💡" },
-  "Entertainment": { color: "bg-purple-500", icon: "🎮" },
+  Health: { color: "bg-red-500", icon: "💊" },
+  Entertainment: { color: "bg-purple-500", icon: "🎮" },
+  Electronics: { color: "bg-cyan-500", icon: "💻" },
+  Others: { color: "bg-gray-500", icon: "📋" },
 };
 
 export const transformCategoryData = (
-  categoryTotals: Record<string, number>
+  categoryTotals: Record<string, number>,
 ): CategoryData[] => {
   const grandTotal = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
 
