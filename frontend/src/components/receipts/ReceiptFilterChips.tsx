@@ -73,7 +73,7 @@ export const ReceiptFilterChips = ({
 
               {/* Dropdown */}
               {activeFilter === filter.id && (
-                <div className="absolute top-full left-0 mt-2 bg-[#1a2129] border border-gray-700 rounded-xl py-2 min-w-35 z-999 shadow-xl">
+                <div className="absolute top-full left-0 mt-2 bg-[#1a2129] border border-gray-700 rounded-xl py-2 min-w-35 max-h-35 overflow-auto z-999 shadow-xl">
                   {filter.id === "status" &&
                     statusOptions.map((opt) => (
                       <button
@@ -108,7 +108,7 @@ export const ReceiptFilterChips = ({
                     <>
                       <button
                         onClick={() => onFilterSelect("store", null)}
-                        className={`w-full text-left px-4 py-2 text-sm transition-colors max-w-55 overflow-auto ${
+                        className={`w-full text-left px-4 py-2 text-sm transition-colors ${
                           filterValues.store === null
                             ? "text-blue-400 bg-blue-500/10"
                             : "text-gray-300 hover:bg-[#232d38]"
