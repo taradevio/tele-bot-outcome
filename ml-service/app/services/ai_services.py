@@ -281,32 +281,16 @@ import uuid
 import os
 import re
 from ollama import AsyncClient
+from app.services.validation import (
+    is_valid_ocr_text,
+    determine_receipt_status,
+)
 
 logger = logging.getLogger(__name__)
 
 custom_client = AsyncClient(host="http://localhost:11434", timeout=120)
 
-# ── Field risk classification ──────────────────────────────────────────────────
-HIGH_RISK_FIELDS   = {"total_amount", "price"}
-MEDIUM_RISK_FIELDS = {"date", "time", "qty", "discount_value", "voucher_amount"}
-LOW_RISK_FIELDS    = {"merchant_name", "items", "category"}
 
-# ── Calibrated thresholds (update these after empirical tuning) ────────────────
-# These are educated starting points — replace with real values after calibration
-FIELD_THRESHOLDS = {
-    "merchant_name":  0.65,
-    "items":          0.68,
-    "qty":            0.75,
-    "date":           0.75,
-    "time":           0.72,
-    "price":          0.85,
-    "discount_value": 0.80,
-    "voucher_amount": 0.80,
-    "total_amount":   0.88,
-    "discount_total": 0.85,
-    "voucher_total":  0.85,
-    "category":       0.60,
-}
 
 # def reconstruct_lines(boxes: list[dict], y_tolerance: int = 25) -> str:
 #     """Dict version of reconstruct_lines — works with {"text", "x", "y"} dicts."""
@@ -352,12 +336,48 @@ def get_dynamic_tolerance(boxes: list[dict]) -> int:
         gap = sorted_by_y[i]["y"] - sorted_by_y[i-1]["y"]
         if gap > 2:  # filter overlap noise
             gaps.append(gap)
+    
+    if len(gaps) < 3:
+        return int(median_height * 0.45)
 
-    if gaps:
-        median_gap = sorted(gaps)[len(gaps) // 2]
-        # Tolerance = 40% dari row spacing, tapi capped di 50% box height
-        return int(min(median_gap * 0.45, median_height * 0.5))
-    return int(median_height * 0.45)
+    sorted_gaps = sorted(gaps)
+    cutoff_idx = int(len(sorted_gaps) * 0.70)
+    candidate_gaps = sorted_gaps[:cutoff_idx]
+
+    if len(candidate_gaps) < 2:
+        return int(median_height * 0.45)
+
+    # Cari jump terbesar antara consecutive values
+    max_jump = 0
+    boundary = candidate_gaps[-1]  # fallback: nilai terbesar di candidates
+
+    for i in range(1, len(candidate_gaps)):
+        jump = candidate_gaps[i] - candidate_gaps[i-1]
+        if jump > max_jump:
+            max_jump = jump
+            # Threshold = midpoint antara dua sisi jump
+            boundary = (candidate_gaps[i] + candidate_gaps[i-1]) / 2
+
+    # Kalau jump-nya kecil banget (< 3px), gap distribution terlalu uniform
+    # → fallback ke height-based
+    if max_jump < 3:
+        return int(median_height * 0.45)
+
+    # Tolerance = sedikit di bawah boundary yang ketemu
+    # Buffer 20% supaya ada room untuk slight misalignment
+    tolerance = int(boundary * 0.8)
+
+    # Safety bounds: jangan terlalu kecil atau terlalu besar
+    min_tolerance = int(median_height * 0.2)   # floor: 20% box height
+    max_tolerance = int(median_height * 0.6)   # ceiling: 60% box height
+
+    return max(min_tolerance, min(tolerance, max_tolerance))
+
+    # if gaps:
+    #     median_gap = sorted(gaps)[len(gaps) // 2]
+    #     # Tolerance = 40% dari row spacing, tapi capped di 50% box height
+    #     return int(min(median_gap * 0.45, median_height * 0.5))
+    # return int(median_height * 0.45)
 
 def reconstruct_lines(boxes: list[dict], y_tolerance: int = None) -> str:
     if y_tolerance is None:
@@ -400,7 +420,7 @@ def reconstruct_lines(boxes: list[dict], y_tolerance: int = None) -> str:
                 continue
             prev = line_boxes[k - 1]
             gap = lb["x"] - (prev["x"] + prev.get("width", 50))
-            if gap > 40:
+            if gap > 30:
                 parts.append("  |  " + lb["text"])
             else:
                 parts.append(" " + lb["text"])
@@ -581,18 +601,46 @@ def merge_spaced_numbers(text: str) -> str:
     """
     return re.sub(r'(\d{1,2})\s+(\d{3})(?!\d)', r'\1\2', text)
 
+def build_llm_input_with_coords(ocr_boxes: list[dict]) -> str:
+    """
+    Kirim boxes dengan koordinat x,y ke LLM.
+    LLM jauh lebih baik dalam spatial reasoning 
+    daripada rule-based reconstruct_lines.
+    """
+    filtered = [
+        b for b in ocr_boxes
+        if b.get("confidence", 0) >= 0.6
+        and len(b.get("text", "").strip()) > 1
+    ]
+
+    lines = []
+    for b in filtered:
+        x    = int(b["x"])
+        y    = int(b["y"])
+        w    = int(b.get("width", 0))
+        text = b["text"].strip()
+        lines.append(f"[{x},{y},{w}] {text}")
+
+    return "\n".join(lines)
+
 def build_llm_input(ocr_boxes: list) -> str:
     """
     Zone-filter + reconstruct lines specifically for LLM consumption.
     Skip header noise, skip low-confidence boxes, skip footer.
     """
     # from app.services.ocr_services import OCRBox, reconstruct_lines
+
+    avg_conf = sum(b["confidence"] for b in ocr_boxes) / len(ocr_boxes)
+    conf_threshold = 0.7 if avg_conf >= 0.75 else 0.5
+    
     filtered = [
         b for b in ocr_boxes
-        if b["confidence"] >= 0.7
+        if b["confidence"] >= conf_threshold
         and len(b["text"].strip()) >= 1
         and not re.match(r'^[.,\-]+$', b["text"].strip())
     ]
+
+    logger.debug(f"OCR avg confidence: {avg_conf:.3f} → threshold: {conf_threshold}")
 
     item_zone_start, footer_zone_start = find_zone_boundaries(filtered)
 
@@ -603,8 +651,10 @@ def build_llm_input(ocr_boxes: list) -> str:
     
     header_text = merge_spaced_numbers(reconstruct_lines(header_boxes))
     body_text   = fix_fragmented_numbers(reconstruct_lines(body_boxes))
+    raw_coords = build_llm_input_with_coords(ocr_boxes)
 
-    return f"=== HEADER ===\n{header_text}\n\n=== ITEMS & TOTALS ===\n{body_text}"
+
+    return f"=== Header === \n{header_text}\n\n === Body === \n{body_text}\n\n === Raw Coordinate ===\n{raw_coords}"
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 # ── Valid categories (must match frontend CATEGORY_CONFIG) ─────────────────────
@@ -725,316 +775,6 @@ def get_category_prompt(items_text: str) -> str:
         JANGAN buat kategori baru di luar daftar di atas."""
 
 
-def is_valid_ocr_text(raw_text: str) -> tuple[bool, str]:
-    if not raw_text:
-        return False, "Empty OCR result"
-
-    cleaned = raw_text.strip()
-    lines = [l for l in cleaned.split('\n') if l.strip()]
-    if len(lines) < 2:
-        return False, "Too few lines detected"
-    if not any(char.isdigit() for char in cleaned):
-        return False, "No numeric values detected"
-
-    tokens = cleaned.split()
-    meaningful_tokens = [t for t in tokens if len(t) > 3]
-    if len(meaningful_tokens) < 2:
-        return False, "Insufficient meaningful text"
-
-    return True, "OK"
-
-
-# def match_field_confidence(field_value: str, ocr_boxes: list) -> float:
-#     """
-#     Find the RapidOCR confidence for a given extracted field value
-#     by fuzzy-matching it against OCR boxes.
-#     Returns 0.0 if no match found (treat as ACTION_REQUIRED).
-#     """
-#     if not field_value or not ocr_boxes:
-#         return 0.0
-
-#     field_str = str(field_value).strip().lower()
-
-#     # Exact match first
-#     for box in ocr_boxes:
-#         if box["text"].strip().lower() == field_str:
-#             return box["confidence"]
-
-#     # Partial match — field value contained in a box (e.g. "INDOMARET" in "INDOMARET CABANG X")
-#     for box in ocr_boxes:
-#         if field_str in box["text"].strip().lower():
-#             return box["confidence"]
-
-#     # No match — RapidOCR likely dropped or missed this box
-#     return 0.0
-
-def match_field_confidence(field_value, ocr_boxes: list, field_name: str = "") -> float:
-    """
-    Match LLM-extracted field value against OCR boxes.
-    Handles 3 cases:
-      1. Direct match     — "INDOMARET" == "INDOMARET"
-      2. Partial match    — "KITA" in "KITA SAYUR WARUNG"
-      3. Multi-box merge  — "KITA SAYUR WARUNG" spread across multiple boxes
-    """
-    if not field_value or not ocr_boxes:
-        return 0.0
-
-    field_str = str(field_value).strip().lower()
-
-    # ── Numeric fields: normalize before matching ──────────────────────────
-    # "24000" should match "24.000=", "24.", ".000" etc.
-    if field_name in {"total_amount", "price", "qty", "discount_value", "voucher_amount"}:
-        return _match_numeric_confidence(field_value, ocr_boxes)
-
-    # ── Date fields: match raw fragments ──────────────────────────────────
-    if field_name in {"date", "time"}:
-        return _match_date_confidence(field_str, ocr_boxes)
-
-    # ── Text fields: token-based matching ────────────────────────────────
-    return _match_text_confidence(field_str, ocr_boxes)
-
-
-def _match_text_confidence(field_str: str, ocr_boxes: list) -> float:
-    """
-    For multi-word fields like "KITA SAYUR WARUNG":
-    Split into tokens, find each token in boxes, return average confidence
-    of matched boxes. This handles LLM concatenating multiple OCR boxes.
-    """
-    tokens = field_str.upper().split()
-    if not tokens:
-        return 0.0
-
-    matched_confidences = []
-
-    for token in tokens:
-        if len(token) <= 2:  # skip noise tokens like "x", "rp"
-            continue
-
-        best_match = 0.0
-        for box in ocr_boxes:
-            box_text = box["text"].strip().upper()
-            # Token fully contained in box or box fully contained in token
-            if token in box_text or box_text in token:
-                best_match = max(best_match, box["confidence"])
-
-        if best_match > 0:
-            matched_confidences.append(best_match)
-
-    if not matched_confidences:
-        return 0.0
-
-    # Return average confidence of matched tokens
-    # If only half the tokens matched, confidence is naturally lower
-    coverage = len(matched_confidences) / max(len([t for t in tokens if len(t) > 2]), 1)
-    avg_conf = sum(matched_confidences) / len(matched_confidences)
-
-    return avg_conf * coverage  # penalize partial matches
-
-
-def _match_numeric_confidence(field_value, ocr_boxes: list) -> float:
-    """
-    For numeric fields: normalize value and box texts, then compare.
-    "24000" should match "24.000=", "24.", ".000"
-    Strategy: find boxes that contain numeric fragments of the value.
-    """
-    import re
-
-    # Normalize field value to plain digits
-    target_digits = re.sub(r'[^\d]', '', str(field_value))
-    if not target_digits:
-        return 0.0
-
-    best_conf = 0.0
-    for box in ocr_boxes:
-        box_digits = re.sub(r'[^\d]', '', box["text"])
-        if not box_digits:
-            continue
-
-        # Check if box digits are a substring of target, or target is in box
-        if box_digits in target_digits or target_digits in box_digits:
-            best_conf = max(best_conf, box["confidence"])
-
-    return best_conf
-
-
-def _match_date_confidence(field_str: str, ocr_boxes: list) -> float:
-    """
-    Date "2026-02-15" should match OCR boxes "Tg1.15/02/" and "/2026".
-    Extract numeric fragments and match against boxes.
-    """
-    import re
-
-    # Extract date parts: year, month, day
-    parts = re.findall(r'\d+', field_str)  # ["2026", "02", "15"]
-    if not parts:
-        return 0.0
-
-    matched = []
-    for part in parts:
-        for box in ocr_boxes:
-            if part in box["text"] or part in re.sub(r'[^\d]', '', box["text"]):
-                matched.append(box["confidence"])
-                break
-
-    if not matched:
-        return 0.0
-
-    return sum(matched) / len(matched)
-
-
-def classify_field_status(confidence: float, field_name: str) -> str:
-    """
-    Classify a field as VERIFIED / ACTION_REQUIRED
-    based on calibrated per-field thresholds.
-    """
-    threshold = FIELD_THRESHOLDS.get(field_name, 0.75)
-
-    if confidence >= threshold:
-        return "VERIFIED"
-    else:
-        return "ACTION_REQUIRED"
-
-
-def arithmetic_cross_check(response_data: dict) -> list[dict]:
-    """
-    Verify LLM math is internally consistent.
-    Catches cases where OCR confidence matching passes but numbers are wrong.
-    """
-    issues = []
-    items = response_data.get("items", [])
-    
-    if not items:
-        return issues
-    
-    # 1. Per-item: qty * price == total_price?
-    for i, item in enumerate(items):
-        qty   = item.get("qty", {}).get("value", 0) or 0
-        price = item.get("price", {}).get("value", 0) or 0
-        total = item.get("total_price", {}).get("value", 0) or 0
-        disc  = item.get("discount_value", {}).get("value", 0) or 0
-        vouc  = item.get("voucher_amount", {}).get("value", 0) or 0
-        
-        expected = (qty * price) - disc - vouc
-        
-        if total > 0 and expected > 0 and abs(expected - total) > 10:  # 10 rupiah tolerance
-            issues.append({
-                "field": f"items[{i}].total_price",
-                "status": "ACTION_REQUIRED",
-                "reason": f"qty*price={expected} != total_price={total}",
-                "confidence": 0.0,
-                "value": total
-            })
-    
-    # 2. sum(item totals) == total_amount?
-    declared_total = response_data.get("total_amount", {}).get("value", 0) or 0
-    sum_items = sum(
-        (item.get("total_price", {}).get("value", 0) or 0)
-        for item in items
-    )
-    
-    if declared_total > 0 and sum_items > 0 and abs(declared_total - sum_items) > 10:
-        issues.append({
-            "field": "total_amount",
-            "status": "ACTION_REQUIRED", 
-            "reason": f"sum(items)={sum_items} != total_amount={declared_total}",
-            "confidence": 0.0,
-            "value": declared_total
-        })
-    
-    return issues
-
-def determine_receipt_status(response_data: dict, ocr_boxes: list) -> dict:
-    """
-    Classify each field using REAL RapidOCR confidence scores,
-    not LLM self-reported confidence.
-    """
-    field_results = {}
-    low_confidence_fields = []
-
-    # ── Header fields ──────────────────────────────────────────────────────────
-    header_fields = ["merchant_name", "date", "time", "total_amount"]
-    for field in header_fields:
-        if field not in response_data:
-            field_results[field] = {"status": "ACTION_REQUIRED", "reason": "field_missing"}
-            continue
-
-        value = response_data[field].get("value")
-        real_conf = match_field_confidence(str(value), ocr_boxes, field_name=field)
-        status = classify_field_status(real_conf, field)
-
-        field_results[field] = {
-            "value": value,
-            "ocr_confidence": real_conf,  # real score from RapidOCR
-            "status": status,
-        }
-
-        if status != "VERIFIED":
-            low_confidence_fields.append({
-                "field": field,
-                "confidence": real_conf,
-                "status": status,
-                "value": value,
-            })
-
-    # ── Items ──────────────────────────────────────────────────────────────────
-    for i, item in enumerate(response_data.get("items", [])):
-        for sub_field in ["name", "price", "qty"]:
-            if sub_field not in item:
-                continue
-
-            value = item[sub_field].get("value")
-            real_conf = match_field_confidence(str(value), ocr_boxes, field_name=sub_field)
-            
-            # Map item sub-field to threshold key
-            threshold_key = "items" if sub_field == "name" else sub_field
-            status = classify_field_status(real_conf, threshold_key)
-
-            field_key = f"items[{i}].{sub_field}"
-            field_results[field_key] = {
-                "value": value,
-                "ocr_confidence": real_conf,
-                "status": status,
-            }
-
-            if status != "VERIFIED":
-                low_confidence_fields.append({
-                    "field": field_key,
-                    "confidence": real_conf,
-                    "status": status,
-                    "value": value,
-                })
-
-    if not response_data.get("items"):
-        low_confidence_fields.append({
-            "field": "items",
-            "confidence": 0.0,
-            "status": "ACTION_REQUIRED",
-            "value": [],
-            "reason": "No items extracted by LLM"
-        })
-    
-    arithmetic_issues = arithmetic_cross_check(response_data)
-    low_confidence_fields.extend(arithmetic_issues)
-
-    # ── Overall receipt status (weighted by field risk) ────────────────────────
-    high_risk_failed = any(
-        f["field"] in HIGH_RISK_FIELDS and f["status"] == "ACTION_REQUIRED"
-        for f in low_confidence_fields
-    )
-
-    if not low_confidence_fields:
-        overall_status = "VERIFIED"
-    else:
-        overall_status = "ACTION_REQUIRED"
-
-    return {
-        "status": overall_status,
-        "field_results": field_results,
-        "low_confidence_fields": low_confidence_fields,
-        "requires_review": len(low_confidence_fields) > 0,
-    }
-
-
 # ── Main LLM function ──────────────────────────────────────────────────────────
 async def refine_receipt(raw_text: str, ocr_boxes: list = None):
     """
@@ -1079,6 +819,7 @@ async def refine_receipt(raw_text: str, ocr_boxes: list = None):
     prompt = f"""
         Kamu adalah sistem ekstraksi data struk belanja Indonesia.
 
+        OCR DATA:
         {input_section}
 
         {category_section}
@@ -1087,22 +828,22 @@ async def refine_receipt(raw_text: str, ocr_boxes: list = None):
 
         1. MERCHANT_NAME:
           TIER 1 — Known brands (LLM normalize dari training knowledge):
-              - Cari nama brand nasional/retail chain yang kamu kenal
+              - Cari nama brand nasional/retail chain yang kamu kenal melalui konteks di header atau footer
               - Normalize OCR noise: "Indesmaret" → "INDOMARET", "ALFMRT" → "ALFAMART"
               - Contoh brands: INDOMARET, ALFAMART, HYPERMART, LAWSON, CIRCLE K, GIANT, HERO, CARREFOUR, TRANSMART, LOTTE MART, YOGYA, dll
 
           TIER 2 — Unknown/local stores:
               - Ambil apa adanya dari OCR, jangan guess atau normalize
-              - Gunakan teks paling prominent di area header
+              - Gunakan konteks paling prominent di area header atau footer
               - Jika OCR noise (confidence rendah, karakter aneh), ambil dari footer context
               - JANGAN fabricate nama yang tidak ada di OCR
             Apabila nama mengandung alamat atau nama daerah, buang nama-nama tersebut dan ambil nama tokonya
 
         2. DATE & TIME:
             - Format Indonesia: DD/MM/YYYY atau DD-MM-YYYY (hari/bulan/tahun, BUKAN bulan/hari)
-            - Konversi ke YYYY-MM-DD (ISO 8601). Contoh: "09/03/2026" → "2026-03-09"
+            - Konversi ke YYYY-MM-DD (ISO 8601). Contoh: "09/03/2026", "09.03.26" → "2026-03-09"
             - TIME: format HH:MM. Contoh: "Jam :10:57" → "10:57", "10.57" → "10:57"
-            - Jika tidak ditemukan date/time, gunakan null
+            - Jika tidak ditemukan date/time, gunakan waktu sekarang
 
         3. ITEMS — FORMAT KOLOM:
            Input pakai " | " sebagai pemisah kolom. Format: NAMA | QTY | HARGA | TOTAL
@@ -1120,13 +861,33 @@ async def refine_receipt(raw_text: str, ocr_boxes: list = None):
 
            CRITICAL: JANGAN gabung angka dari kolom berbeda:
              "IDM KTG PLSTK | 1 | 200 | 200" → price=200, BUKAN price=200200
+            
+            NEGATIVE QTY — ITEM VOID/RETUR:
+                Qty negatif = kasir cancel/void item tersebut.
+                Rules:
+                - qty=-1 dengan item yang sama sebelumnya → kedua item saling cancel
+                Contoh:
+                    "RINSO ANTINODA | 1 | 5000 | 5000"
+                    "RINSO ANTINODA | -1 | 5000 | -5000"
+                → Jangan include kedua item ini di output, atau include dengan total_price=0
+
+                - Kalau item void berdiri sendiri tanpa pasangan:
+                    "IDM KTG PLSTK | -1 | 200 | -200"
+                → Include dengan qty=-1, total_price=-200
+                → total_amount tetap harus reflect pengurangan ini
+
+                - JANGAN ubah price menjadi 0 — price adalah harga satuan, selalu positif
+                - Yang berubah adalah total_price = qty × price = -1 × 200 = -200
+
+                Cross-check:
+                sum(total_price per item) == total_amount
+                Kalau ada void item, sum akan otomatis berkurang karena total_price negatif
 
         4. VOUCHER/DISKON:
            a. Per item: cari "Diskon", "Disc", "Voucher" di bawah item → assign ke item DI ATAS-nya
               - "(4,700)" atau "VOUCHER : (4,700)" → voucher_amount=4700 (tanda kurung = pengurangan)
-           b. Summary: jika diskon di bagian bawah ("Total Diskon", "Total Voucher") → distribusikan proporsional ke semua item
-           c. Tidak ada diskon: discount_type=null, discount_value=0, voucher_amount=0
-           d. total_price = (qty × price) - discount_amount - voucher_amount
+           b. Tidak ada diskon: discount_type=null, discount_value=0, voucher_amount=0
+           c. total_price = (qty x price) - discount_amount - voucher_amount
               Contoh: price=31000, qty=1, discount=6100, voucher=2000 → total_price=22900
 
         5. TOTAL:
@@ -1297,9 +1058,9 @@ async def refine_receipt(raw_text: str, ocr_boxes: list = None):
             prompt=prompt,
             format="json",
             options={
-                "temperature": 0.1,  # deterministic for data extraction
-                "top_k": 20,
-                "top_p": 0.6,
+                "temperature": 0.25,  # deterministic for data extraction
+                "top_k": 30,
+                "top_p": 0.7,
             }
         )
 
@@ -1311,8 +1072,9 @@ async def refine_receipt(raw_text: str, ocr_boxes: list = None):
             boxes_for_scoring = ocr_boxes or []
             scoring = determine_receipt_status(response_data, boxes_for_scoring)
 
-            logger.info(f"Receipt {receipt_id} status: {scoring['status']}")
-            logger.debug(f"LLM input section:\n{input_section}")
+            # logger.info(f"Receipt {receipt_id} status: {scoring['status']}")
+            # logger.debug(f"LLM input section:\n{input_section}")
+            # print(f"response_data: {response_data}")
 
             return {
                 "receipt_data": response_data,

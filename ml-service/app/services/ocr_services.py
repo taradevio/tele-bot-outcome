@@ -47,6 +47,7 @@ def correct_perspective(img):
     # Approximate polygon
     peri = cv2.arcLength(largest, True)
     approx = cv2.approxPolyDP(largest, 0.02 * peri, True)
+    print(f"approx: {approx}")
     
     # Butuh tepat 4 corner untuk perspective transform
     if len(approx) != 4:
@@ -58,6 +59,16 @@ def correct_perspective(img):
     rect = order_points(pts)
     
     (tl, tr, br, bl) = rect
+
+    # Cek apakah sudah cukup lurus — skip kalau angle < 5 derajat
+    top_angle = abs(np.degrees(np.arctan2(
+        tr[1] - tl[1],  # delta y sisi atas
+        tr[0] - tl[0]   # delta x sisi atas
+    )))
+    
+    if top_angle < 5.0:
+        logger.debug(f"Perspective angle {top_angle:.1f}° — skipping correction")
+        return img
     
     # Target width dan height
     width = int(max(
@@ -138,15 +149,22 @@ def get_receipt_area_ratio(img) -> float:
     total_area = img.shape[0] * img.shape[1]
     
     ratio = receipt_area / total_area
+    print(f"ratio: {ratio}")
     return ratio
 
 def assess_image_quality(img) -> dict:
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    cv2.imwrite("assessImage.jpg", gray)
+    print(f"gray: {gray}")
     
     blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+    print(f"blur_score: {blur_score}")
     brightness = np.mean(gray)
+    print(f"brightness: {brightness}")
     contrast = np.std(gray)
+    print(f"contrast: {contrast}")
     receipt_ratio = get_receipt_area_ratio(img)
+    print(f"receipt ratio: {receipt_ratio}")
     
     issues = []
     if blur_score < 100:
@@ -250,7 +268,6 @@ def crop_receipt(img):
     cropped = img[y:y+h, x:x+w]
     logger.info(f"Cropped receipt: {w}x{h} from {img.shape[1]}x{img.shape[0]}")
 
-    cv2.imwrite("debug_cropped_image.jpg", cropped)
     
     return cropped
 
@@ -287,6 +304,7 @@ def _parse_ocr_result(result) -> list[OCRBox]:
 
     # Sort top→bottom, left→right
     boxes.sort(key=lambda b: (b.y, b.x))
+    print(f"boxes: {boxes}")
     return boxes
     
 # async def ocr_image(image_path: str) -> str:
@@ -346,6 +364,34 @@ def get_dynamic_tolerance(boxes: list[dict]) -> int:
     # Cukup untuk catch misalignment, tapi gak sampai gabung baris berbeda
     return int(median_height * 0.6)
 
+def get_column_gap_threshold(line_boxes: list) -> float:
+    """
+    Detect significant column gaps secara dinamis.
+    Struk dengan multi-column layout punya bimodal gap distribution:
+    - Small gaps: antar kata dalam kolom yang sama
+    - Large gaps: antar kolom berbeda
+    """
+    if len(line_boxes) < 3:
+        return 30  # fallback
+
+    gaps = []
+    sorted_line = sorted(line_boxes, key=lambda b: b.x)
+    for i in range(1, len(sorted_line)):
+        prev = sorted_line[i - 1]
+        curr = sorted_line[i]
+        gap = curr.x - (prev.x + prev.width)
+        if gap > 0:
+            gaps.append(gap)
+
+    if not gaps:
+        return 30
+
+    gaps.sort()
+    median_gap = gaps[len(gaps) // 2]
+
+    # Column separator = gap yang > 2x median
+    return median_gap * 2.0
+
 def reconstruct_lines(boxes: list[OCRBox], y_tolerance: int = None) -> str:
     """
     Group OCRBoxes into lines using vertical-overlap detection (not center-Y
@@ -386,7 +432,7 @@ def reconstruct_lines(boxes: list[OCRBox], y_tolerance: int = None) -> str:
             if min_height > 0 and overlap / min_height > 0.3:
                 line_boxes.append(other)
                 used.add(j)
-
+        col_gap_threshold = get_column_gap_threshold(line_boxes)
         # Sort tokens left → right within the line
         line_boxes.sort(key=lambda b: b.x)
 
@@ -398,10 +444,11 @@ def reconstruct_lines(boxes: list[OCRBox], y_tolerance: int = None) -> str:
             prev = line_boxes[k - 1]
             gap = lb.x - (prev.x + prev.width)
             # Gap > 40 px = different column → mark with " | "
-            if gap > 40:
-                parts.append(" | " + lb.text)
-            else:
-                parts.append(" " + lb.text)
+            # if gap > 40:
+            #     parts.append(" | " + lb.text)
+            # else:
+            #     parts.append(" " + lb.text)
+            parts.append("  |  " + lb.text if gap > col_gap_threshold else " " + lb.text)
 
         lines.append("".join(parts))
 
@@ -424,12 +471,15 @@ async def ocr_image(image_path: str) -> OCRResult:
 
         def process() -> OCRResult:
             img = cv2.imread(image_path)
+            print(type(img))
+            cv2.imwrite("debug_original.jpg", img)
             if img is None:
                 logger.warning(f"Could not read image: {image_path}")
                 return OCRResult(boxes=[], raw_text="")
 
             # ── Quality assessment (non-blocking) ──────────────────────────
             quality = assess_image_quality(img)
+            print(f"quality: {quality}")
             quality_issues = quality["issues"] if not quality["is_acceptable"] else []
             if quality_issues:
                 logger.warning(f"Image quality issues detected: {quality_issues} — attempting OCR anyway")
@@ -442,28 +492,39 @@ async def ocr_image(image_path: str) -> OCRResult:
             # img_corrected is the perspective-fixed image, or the original if
             # the fix produced a fragment smaller than 50% of the frame.
             img_crop = crop_receipt(img_corrected)
+            cv2.imwrite("debug_cropped_image.jpg", img_crop)
 
+            gray = img_crop[:, :, 1] 
             # ── Step 3: Grayscale ──────────────────────────────────────────
             gray = cv2.cvtColor(img_crop, cv2.COLOR_BGR2GRAY)
+            print(f"img_crop shape: {img_crop.shape}")  # harusnya (h, w, 3)
+            print(f"img_crop dtype: {img_crop.dtype}")
+            cv2.imwrite("debug_gray.jpg", gray)
 
             # ── Step 4: Fix inverted thermal receipts (white-on-dark) ──────
             gray = check_and_fix_inversion(gray)
 
             # ── Step 5: Denoise ────────────────────────────────────────────
             denoised = cv2.fastNlMeansDenoising(gray, h=15)
+            cv2.imwrite("debug_denoised.jpg", denoised)
 
             # ── Step 6: CLAHE contrast enhancement ────────────────────────
             clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+            # cv2.imwrite("debug_clahe.jpg", clahe)
             enhanced = clahe.apply(denoised)
+            cv2.imwrite("desbug_enhanced.jpg", enhanced)
 
             # ── Step 7: Deskew ─────────────────────────────────────────────
             deskewed = deskew(enhanced)
+            print(f"deskewed: {deskewed}")
+            cv2.imwrite("debug_deskewed.jpg", deskewed)
 
             # ── Step 8: Run OCR ────────────────────────────────────────────
             result = engine(deskewed)
 
             # ── Step 9: Parse boxes ────────────────────────────────────────
             boxes = _parse_ocr_result(result)
+            print(f"boxes: {boxes}")
 
             if not boxes:
                 logger.warning(f"No text detected in: {image_path}")
@@ -471,6 +532,7 @@ async def ocr_image(image_path: str) -> OCRResult:
 
             # Build raw_text using unified overlap-based line reconstruction
             raw_text = reconstruct_lines(boxes)
+            print(raw_text)
             logger.info(
                 f"OCR complete: {len(boxes)} boxes, "
                 f"avg confidence: {sum(b.confidence for b in boxes)/len(boxes):.3f}"

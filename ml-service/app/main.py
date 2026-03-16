@@ -221,7 +221,7 @@ async def background_refine(update, ocr_result, file_path):
             caption += f"⚠️ *Needs review:* {flagged}\n"
 
     try:
-        await update.message.reply_text(caption, parse_mode='Markdown')
+        await update.message.reply_text(caption)
 
     except Exception as e:
         if not receipt_data:
