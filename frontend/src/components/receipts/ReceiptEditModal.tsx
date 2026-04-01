@@ -25,7 +25,7 @@ import {
   MoreVertical,
   ShoppingBag,
   GitMerge,
-  SquarePen
+  SquarePen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
@@ -62,6 +62,7 @@ export const ReceiptEditModal = ({
   isReadOnly = false,
 }: ReceiptEditModalProps) => {
   const [editedReceipt, setEditedReceipt] = useState<UserReceipts>(receipt);
+  const [isEditable, setIsEditable] = useState(false);
   // const [zoomLevel, setZoomLevel] = useState(1);
   // const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   // const [isDragging, setIsDragging] = useState(false);
@@ -296,9 +297,10 @@ export const ReceiptEditModal = ({
                   </button>
                   <button
                     onClick={() => {
-                      setIsMenuOpen(true);
+                      setIsMenuOpen(false);
+                      setIsEditable(true);
                     }}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-500/10 transition-colors text-sm font-medium"
+                    className="w-full flex items-center gap-2 px-4 py-3 text-blue-400 hover:bg-blue-500/10 transition-colors text-sm font-medium"
                   >
                     <SquarePen className="h-4 w-4" />
                     Edit Receipt
@@ -350,8 +352,8 @@ export const ReceiptEditModal = ({
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 border-2 border-yellow-500 bg-yellow-500/10 w-48 h-24 rounded pointer-events-none" />
             </div> */}
 
-            {/* Image Controls */}
-            {/* <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+        {/* Image Controls */}
+        {/* <div className="absolute bottom-4 right-4 flex flex-col gap-2">
               <Button
                 size="icon"
                 variant="secondary"
@@ -370,10 +372,10 @@ export const ReceiptEditModal = ({
               </Button>
             </div> */}
 
-            {/* <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+        {/* <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
 
             </div> */}
-          {/* </div> */}
+        {/* </div> */}
         {/* )} */}
 
         {/* Drag Handle for Bottom Sheet look */}
@@ -411,7 +413,7 @@ export const ReceiptEditModal = ({
                     )}
                   </div>
                   <div>
-                    {isReadOnly ? (
+                    {isReadOnly && !isEditable ? (
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <h2 className="text-xl font-bold text-white leading-tight">
@@ -491,7 +493,7 @@ export const ReceiptEditModal = ({
                 </div>
               )}
 
-              {!isReadOnly ? (
+              {!isReadOnly || isEditable ? (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     {/* Date */}
@@ -571,7 +573,7 @@ export const ReceiptEditModal = ({
           <div>
             <div className="flex items-center justify-between mb-4 border-t border-dashed border-gray-800 pt-6">
               <div className="flex items-center gap-2">
-                {!isReadOnly && (
+                {(!isReadOnly || isEditable) && (
                   <div className="bg-blue-600/20 p-1.5 rounded-lg">
                     <ListChecks className="h-5 w-5 text-blue-500" />
                   </div>
@@ -599,7 +601,7 @@ export const ReceiptEditModal = ({
                   Split Bill
                 </Button>
               )}
-              {!isReadOnly && (
+              {(!isReadOnly || isEditable) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -615,9 +617,9 @@ export const ReceiptEditModal = ({
               {editedReceipt.receipt_items.map((item, idx) => (
                 <div
                   key={item.id}
-                  className={`group relative ${isReadOnly ? "flex items-center justify-between" : ""}`}
+                  className={`group relative ${isReadOnly && !isEditable ? "flex items-center justify-between" : ""}`}
                 >
-                  {isReadOnly ? (
+                  {isReadOnly && !isEditable ? (
                     <>
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
@@ -849,8 +851,28 @@ export const ReceiptEditModal = ({
 
       {/* Footer Actions */}
       <div className="p-4 bg-[#0f1419] border-t border-gray-800 shrink-0 mb-4 space-y-3">
-        {isReadOnly ? (
+        {isReadOnly && !isEditable ? (
           <div className="w-full" />
+        ) : isEditable ? (
+          <>
+            <Button
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-12 text-lg font-semibold"
+              onClick={handleSave}
+            >
+              <CheckCircle2 className="mr-2 h-5 w-5" />
+              Confirm & Save
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full text-gray-400 hover:text-white"
+              onClick={() => {
+                setIsEditable(false);
+                setEditedReceipt(receipt);
+              }}
+            >
+              Cancel Edit
+            </Button>
+          </>
         ) : (
           <>
             <Button
