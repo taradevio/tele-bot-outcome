@@ -25,7 +25,7 @@ import {
   MoreVertical,
   ShoppingBag,
   GitMerge,
-  // SquarePen
+  SquarePen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
@@ -293,6 +293,15 @@ export const ReceiptEditModal = ({
                   >
                     <Trash2 className="h-4 w-4" />
                     Delete Receipt
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-500/10 transition-colors text-sm font-medium"
+                  >
+                    <SquarePen className="h-4 w-4" />
+                    Edit Receipt
                   </button>
                 </div>
               )}
