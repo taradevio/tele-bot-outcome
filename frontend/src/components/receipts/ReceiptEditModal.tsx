@@ -25,6 +25,7 @@ import {
   MoreVertical,
   ShoppingBag,
   GitMerge,
+  // SquarePen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
@@ -282,7 +283,7 @@ export const ReceiptEditModal = ({
               </Button>
 
               {isMenuOpen && (
-                <div className="absolute right-0 top-12 w-48 bg-[#1a2129] border border-gray-800 rounded-xl shadow-2xl z-20 py-1 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute border-4 border-yellow-300 right-0 top-12 w-48 bg-[#1a2129] rounded-xl shadow-2xl z-20 py-1 animate-in fade-in zoom-in-95 duration-100">
                   <button
                     onClick={() => {
                       setIsMenuOpen(false);
