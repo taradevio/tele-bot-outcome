@@ -424,7 +424,7 @@ app.get("/charts", (c) => {
 });
 
 app.get("/", (c) => {
-  return c.text("Hello Hono!");
+  return c.text("Hello Hono from Struktly!");
 });
 
 export default app;
