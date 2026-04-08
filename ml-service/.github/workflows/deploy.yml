@@ -1,0 +1,35 @@
+name: Deploy ML Service
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Deploy to homelab
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.ML_SERVICE_TAILSCALE_IP }}
+          username: ${{ secrets.ML_SERVICE_USER }}
+          key: ${{ secrets.ML_SERVICE_SSH_KEY }}
+          script: |
+            cd ~/ml-service
+            git pull origin main
+            docker build -t struktly-ml .
+            docker stop ml-service || true
+            docker rm ml-service || true
+            docker run -d --name ml-service -p 8000:8000 \
+              --env-file .env \
+              --restart unless-stopped \
+              struktly-ml
+
+
