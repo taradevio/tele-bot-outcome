@@ -349,6 +349,50 @@ const UserDashboard = () => {
     }
   }, [receiptsData]);
 
+  // Calculate stats from receipts data
+  const stats = useMemo(() => {
+    if (!receiptsData?.receipts) {
+      return {
+        currentMonthTotal: 0,
+        previousMonthTotal: 0,
+        monthOverMonthChange: 0,
+        spendingDifference: 0,
+      };
+    }
+
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    let currentMonthTotal = 0;
+    let previousMonthTotal = 0;
+
+    receiptsData.receipts.forEach((receipt: any) => {
+      const date = new Date(receipt.transaction_date);
+
+      if (date >= currentMonthStart) {
+        currentMonthTotal += receipt.total_amount || 0;
+      } else if (date >= previousMonthStart && date <= previousMonthEnd) {
+        previousMonthTotal += receipt.total_amount || 0;
+      }
+    });
+
+    const monthOverMonthChange =
+      previousMonthTotal > 0
+        ? ((currentMonthTotal - previousMonthTotal) / previousMonthTotal) * 100
+        : 0;
+
+    const spendingDifference = currentMonthTotal - previousMonthTotal;
+
+    return {
+      currentMonthTotal,
+      previousMonthTotal,
+      monthOverMonthChange,
+      spendingDifference,
+    };
+  }, [receiptsData]);
+
   // const groupedStores = useMemo(() => {
   //   const storeMap = userReceipts.reduce((acc, item) => {
   //     const key = item.store_name.trim().toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())
@@ -519,8 +563,15 @@ const UserDashboard = () => {
                       Month over Month
                     </p>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-blue-400">
-                        +5.2%
+                      <span
+                        className={`text-2xl font-bold ${
+                          stats.monthOverMonthChange >= 0
+                            ? "text-red-400"
+                            : "text-green-400"
+                        }`}
+                      >
+                        {stats.monthOverMonthChange >= 0 ? "+" : ""}
+                        {stats.monthOverMonthChange.toFixed(1)}%
                       </span>
                       <span className="text-sm text-gray-300">
                         vs last month
@@ -529,21 +580,43 @@ const UserDashboard = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-300 mb-1">Total Spent</p>
-                    <span className="text-2xl font-bold">Rp2,450.00</span>
+                    <span className="text-2xl font-bold">
+                      {formattedRupiah(stats.currentMonthTotal)}
+                    </span>
                   </div>
                 </div>
 
                 {/* Spending Info */}
                 <div className="flex items-center gap-2 mb-6 bg-[#232d38] rounded-lg px-3 py-2">
-                  <div className="p-1.5 bg-green-500/20 rounded-lg">
-                    <TrendingUp className="h-4 w-4 text-green-400" />
+                  <div
+                    className={`p-1.5 rounded-lg ${
+                      stats.spendingDifference > 0
+                        ? "bg-red-500/20"
+                        : "bg-green-500/20"
+                    }`}
+                  >
+                    <TrendingUp
+                      className={`h-4 w-4 ${
+                        stats.spendingDifference > 0
+                          ? "text-red-400"
+                          : "text-green-400"
+                      }`}
+                    />
                   </div>
                   <p className="text-sm text-gray-300">
                     Your spending is{" "}
-                    <span className="text-red-400 font-medium">
-                      Rp121.50 higher
+                    <span
+                      className={`font-medium ${
+                        stats.spendingDifference > 0
+                          ? "text-red-400"
+                          : "text-green-400"
+                      }`}
+                    >
+                      {stats.spendingDifference > 0 ? "+" : ""}
+                      {formattedRupiah(Math.abs(stats.spendingDifference))}
                     </span>{" "}
-                    than the same time last month.
+                    {stats.spendingDifference > 0 ? "higher" : "lower"} than
+                    the same time last month.
                   </p>
                 </div>
 
