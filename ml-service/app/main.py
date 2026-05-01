@@ -125,6 +125,20 @@ async def background_refine(update, ocr_result, file_path, start_time):
     date = receipt_data.get("date", {}).get("value", "N/A")
     receipt_time = receipt_data.get("time", {}).get("value", "N/A")
     
+    # Format time to ensure HH:MM format
+    if receipt_time and receipt_time != "N/A":
+        # Remove spaces and normalize separators
+        time_str = receipt_time.strip().replace(".", ":")
+        time_parts = time_str.split(":")
+        if len(time_parts) >= 2:
+            # Add leading zeros
+            try:
+                hours = str(int(time_parts[0])).zfill(2)
+                minutes = str(int(time_parts[1])).zfill(2)
+                receipt_time = f"{hours}:{minutes}"
+            except (ValueError, IndexError):
+                receipt_time = "N/A"
+    
     logger.info(f"Extracted receipt data: date={date}, time={receipt_time}, store={store_name}, total={total_amount}")
     
     items = [

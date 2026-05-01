@@ -68,15 +68,35 @@ app.post("/process-receipt", async (c) => {
     }
 
     const dateStr = payloadData.receipt.date;
-    const timeStr = payloadData.receipt.receipt_time;
+    let timeStr = payloadData.receipt.receipt_time;
 
     console.log("Received date and time:", { dateStr, timeStr });
 
-    // Validate time format (HH:MM or HH:MM:SS)
-    const isValidTime = timeStr && /^\d{2}:\d{2}(:\d{2})?$/.test(timeStr);
-    const safeTime = isValidTime ? timeStr : "00:00:00";
+    // Normalize time format - add leading zeros if needed
+    const normalizeTime = (time: string): string => {
+      if (!time) return "00:00:00";
+      
+      // Remove any spaces and normalize separators (. or : both work)
+      let normalized = time.trim().replace(/\./g, ":");
+      
+      // Split by colon
+      const parts = normalized.split(":").map(p => p.trim());
+      
+      if (parts.length < 2) return "00:00:00";
+      
+      // Add leading zeros to hours and minutes
+      const hours = parts[0].padStart(2, "0");
+      const minutes = parts[1].padStart(2, "0");
+      const seconds = parts[2]?.padStart(2, "0") || "00";
+      
+      return `${hours}:${minutes}:${seconds}`;
+    };
 
-    console.log("Final time used:", { safeTime, isValidTime });
+    const normalizedTime = normalizeTime(timeStr);
+    const isValidTime = /^\d{2}:\d{2}(:\d{2})?$/.test(normalizedTime);
+    const safeTime = isValidTime ? normalizedTime : "00:00:00";
+
+    console.log("Final time used:", { original: timeStr, normalized: normalizedTime, safeTime, isValidTime });
 
     const transactionDate = new Date(`${dateStr}T${safeTime}`).toISOString();
     

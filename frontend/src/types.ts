@@ -22,6 +22,7 @@ export interface UserReceipts {
   store_name: string;
   total_amount: number;
   transaction_date: string;
+  receipt_time: string;
   status: "PENDING" | "ACTION_REQUIRED" | "VERIFIED";
   low_confidence_fields: LowConfidenceFields[];
   receipt_items: ReceiptItem[];
