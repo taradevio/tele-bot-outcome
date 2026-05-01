@@ -58,13 +58,6 @@ interface UserReceipts {
 
 const queryClient = new QueryClient();
 
-interface ChartDataPoint {
-  week: string;
-  spending: number | null;
-  budget: number;
-  predicted: number | null;
-}
-
 // const storeData = [
 //   {
 //     id: 1,
@@ -185,8 +178,6 @@ const UserDashboard = () => {
   const [telegramUserProfile, setTelegramUserProfile] =
     useState<TelegramUser | null>(null);
   const [photoUrl, SetPhotoUrl] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-  // const [isLoading, setIsLoading] = useState(true);
   const [focusedData, setFocusedData] = useState<{
     week: string;
     spending: number | null;
@@ -215,7 +206,7 @@ const UserDashboard = () => {
           console.error("bukan telegram");
           return;
         }
-        console.log("init data", initData);
+        // console.log("init data", initData);
         setUserReceipts(initData);
 
         telegram.ready();
@@ -229,11 +220,11 @@ const UserDashboard = () => {
             // console.log("decoded user", decodeUser);
             // console.log("user data", userData);
           } catch (error) {
-            console.error("error decoding user data", error);
+        console.error("error decoding user data", error);
           }
         }
       } catch (error) {
-        console.log("error getting telegram data", error);
+        console.error("Error extracting Telegram data:", error);
       }
     };
 
@@ -264,12 +255,14 @@ const UserDashboard = () => {
       setUserReceiptsItem(data.userReceipts);
 
       (async () => {
-        await setToken(data.accessToken);
-        console.log("Token set:", sessionStorage.getItem("access_token"));
+        try {
+          await setToken(data.accessToken);
+        } catch (error) {
+          console.error("Token set error:", error);
+        }
       })();
       // setTelegramUser(data.userReceipts);
-      console.log("data", userReceipts);
-      // console.log("telegramUser:", telegramUserProfile);
+      // Debug: userReceipts query data loaded
     }
   }, [data]);
 
@@ -296,57 +289,64 @@ const UserDashboard = () => {
     refetchInterval: 60000, // Refetch every minute
   });
 
-  // Aggregate receipts into weekly chart data
-  useEffect(() => {
-    if (receiptsData?.receipts) {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const WEEKLY_BUDGET = 750;
+  // Memoize chart data aggregation to avoid unnecessary re-renders
+  const chartData = useMemo(() => {
+    if (!receiptsData?.receipts) {
+      return [
+        { week: "Week 1", spending: 0, budget: 750, predicted: null },
+        { week: "Week 2", spending: 0, budget: 750, predicted: null },
+        { week: "Week 3", spending: 0, budget: 750, predicted: null },
+        { week: "Week 4", spending: 0, budget: 750, predicted: null },
+      ];
+    }
 
-      const weeklyData: Record<
-        number,
-        { week: string; spending: number; budget: number; predicted: number | null }
-      > = {};
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const WEEKLY_BUDGET = 750;
 
-      receiptsData.receipts.forEach((receipt: any) => {
-        const date = new Date(receipt.transaction_date);
-        
-        // Only include receipts from current month
-        if (date < monthStart) return;
+    const weeklyData: Record<
+      number,
+      { week: string; spending: number; budget: number; predicted: number | null }
+    > = {};
 
-        const weekNumber = Math.floor(
-          (date.getDate() - date.getDay() + 6) / 7
-        );
-        const weekKey = weekNumber;
+    receiptsData.receipts.forEach((receipt: any) => {
+      const date = new Date(receipt.transaction_date);
 
-        if (!weeklyData[weekKey]) {
-          weeklyData[weekKey] = {
-            week: `Week ${weekKey + 1}`,
-            spending: 0,
-            budget: WEEKLY_BUDGET,
-            predicted: null,
-          };
-        }
+      // Only include receipts from current month
+      if (date < monthStart) return;
 
-        weeklyData[weekKey].spending += receipt.total_amount || 0;
-      });
+      const weekNumber = Math.floor(
+        (date.getDate() - date.getDay() + 6) / 7
+      );
+      const weekKey = weekNumber;
 
-      // Calculate predictions for last week
-      const weeks = Object.values(weeklyData).sort((a, b) => {
-        const aNum = parseInt(a.week.split(" ")[1]);
-        const bNum = parseInt(b.week.split(" ")[1]);
-        return aNum - bNum;
-      });
-
-      if (weeks.length >= 2) {
-        const lastWeek = weeks[weeks.length - 1];
-        const prevWeek = weeks[weeks.length - 2];
-        const avgSpending = (lastWeek.spending + prevWeek.spending) / 2;
-        lastWeek.predicted = Math.round(avgSpending);
+      if (!weeklyData[weekKey]) {
+        weeklyData[weekKey] = {
+          week: `Week ${weekKey + 1}`,
+          spending: 0,
+          budget: WEEKLY_BUDGET,
+          predicted: null,
+        };
       }
 
-      setChartData(weeks);
+      weeklyData[weekKey].spending += receipt.total_amount || 0;
+    });
+
+    // Calculate predictions for last week
+    const weeks = Object.values(weeklyData).sort((a, b) => {
+      const aNum = parseInt(a.week.split(" ")[1]);
+      const bNum = parseInt(b.week.split(" ")[1]);
+      return aNum - bNum;
+    });
+
+    if (weeks.length >= 2) {
+      const lastWeek = weeks[weeks.length - 1];
+      const prevWeek = weeks[weeks.length - 2];
+      const avgSpending = (lastWeek.spending + prevWeek.spending) / 2;
+      lastWeek.predicted = Math.round(avgSpending);
     }
+
+    return weeks;
   }, [receiptsData]);
 
   // Calculate stats from receipts data
@@ -446,22 +446,20 @@ const UserDashboard = () => {
 
     return Object.values(storeMap);
   }, [userReceiptsItem]);
-  const flatItems = userReceiptsItem?.flatMap(
-    (receipt) => receipt.receipt_items,
-  );
-  console.log("userReceipts", userReceipts);
 
-  // const mapItems = flatItems.map((item) => item.total)
+  const flatItems = useMemo(() => {
+    return userReceiptsItem?.flatMap((receipt) => receipt.receipt_items) || [];
+  }, [userReceiptsItem]);
 
-  const categoryTotals = flatItems.reduce(
-    (acc, item) => {
-      acc[item.category] = (acc[item.category] || 0) + item.total_price;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-
-  console.log("category", categoryTotals);
+  const categoryTotals = useMemo(() => {
+    return flatItems.reduce(
+      (acc, item) => {
+        acc[item.category] = (acc[item.category] || 0) + item.total_price;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+  }, [flatItems]);
 
   if (error) return "Data dari db kagak keangkut coy...";
 
