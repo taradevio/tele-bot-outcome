@@ -163,7 +163,11 @@ export const ReceiptEditModal = ({
   // };
 
   const handleSave = () => {
-    setIsConfirmModalOpen(true);
+    if (isEditable) {
+      confirmSave();
+    } else {
+      setIsConfirmModalOpen(true);
+    }
   };
 
   const confirmSave = async () => {
@@ -503,13 +507,30 @@ export const ReceiptEditModal = ({
                       </label>
                       <div className="relative">
                         <DarkInput
-                          value={new Date(
-                            editedReceipt.transaction_date,
-                          ).toLocaleDateString()}
-                          onChange={() => {}}
+                          type="date"
+                          value={new Date(editedReceipt.transaction_date)
+                            .toISOString()
+                            .split("T")[0]}
+                          onChange={(e) => {
+                            const currentDate = new Date(
+                              editedReceipt.transaction_date,
+                            );
+                            const [year, month, day] = e.target.value.split(
+                              "-",
+                            );
+                            currentDate.setFullYear(
+                              parseInt(year),
+                              parseInt(month) - 1,
+                              parseInt(day),
+                            );
+                            setEditedReceipt({
+                              ...editedReceipt,
+                              transaction_date: currentDate.toISOString(),
+                            });
+                          }}
                           className="pr-10"
                         />
-                        <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
                       </div>
                     </div>
 
@@ -520,16 +541,27 @@ export const ReceiptEditModal = ({
                       </label>
                       <div className="relative">
                         <DarkInput
-                          value={new Date(
-                            editedReceipt.transaction_date,
-                          ).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                          onChange={() => {}}
+                          type="time"
+                          value={new Date(editedReceipt.transaction_date)
+                            .toISOString()
+                            .substr(11, 5)}
+                          onChange={(e) => {
+                            const currentDate = new Date(
+                              editedReceipt.transaction_date,
+                            );
+                            const [hours, minutes] = e.target.value.split(":");
+                            currentDate.setHours(
+                              parseInt(hours),
+                              parseInt(minutes),
+                            );
+                            setEditedReceipt({
+                              ...editedReceipt,
+                              transaction_date: currentDate.toISOString(),
+                            });
+                          }}
                           className="pr-10"
                         />
-                        <Clock className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <Clock className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
                       </div>
                     </div>
                   </div>
